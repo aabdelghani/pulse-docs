@@ -17,8 +17,8 @@ date: "2026-09-03"
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Sprint window | Week 4 to week 6, 7 September to 25 September 2026 |
-| Gate | Week 6 demo: signal layer and Flutter cluster verified on live broker data |
-| Related | PULSE-StRS-001 section 3.1, PULSE-SyRS-001, PULSE-SAF-001, PULSE-SEC-001 |
+| Review gate | Week 6 demo: signal layer and Flutter cluster verified on live broker data |
+| Related | PULSE-StRS-001, PULSE-SyRS-001, PULSE-SAF-001, PULSE-SEC-001 |
 
 ## Change log
 
@@ -28,7 +28,7 @@ date: "2026-09-03"
 
 # 1. Sprint goal
 
-Close work package 02: the signal layer and the Flutter cluster are verified on live broker data by an automated suite that runs before every demo, and the desk-only shortcuts that have a sprint 2 requirement attached are removed. The week 6 demo shows the same cluster as week 3, now with contract tests, degraded-state display, encrypted transport and pinned upstream versions behind it.
+Close work package 02. An automated suite verifies the signal layer and the Flutter cluster against live broker data, and runs before every demo. Every desk-only shortcut that has a sprint 2 requirement attached is removed. The week 6 demo shows the same cluster as week 3, now with contract tests, degraded-state display, encrypted transport and pinned upstream versions behind it.
 
 # 2. Capacity
 
@@ -51,7 +51,7 @@ Ordered by priority. Every item names the requirement it moves and the status it
 | 4 | Staleness detection in the Flutter cluster: freshness criterion per safety-relevant signal from PULSE-SAF-001 section 3, degraded presentation, broker loss shows all stale | SR-4, SR-5 | Implemented | 32 | Test: kill the broker, dashes appear within the criterion |
 | 5 | Same staleness handling in the Compose cluster | SR-4, SR-5 | Implemented | 16 | Test on the emulator |
 | 6 | Mutual TLS on the databroker with clearly marked development certificates; start-up prints a warning whenever `--insecure` is used; both clients and both providers connect over TLS | CS-3, IR-5 | Implemented | 24 | Suite: plaintext client refused unless the development flag is set |
-| 7 | Pin the databroker image digest and the Flutter SDK version; record both in the README | NFR-8, DD-10, DD-11 | Implemented | 6 | Inspection |
+| 7 | Pin the Flutter SDK version and record it in the README; the databroker image digest is already pinned | NFR-8, DD-10, DD-11 | Partial | 6 | Inspection |
 | 8 | Software bill of materials per component (CycloneDX) and a vulnerability check in the suite | CS-8 | Implemented | 14 | Suite |
 | 9 | Driver-monitor privacy test: no file written, no socket other than the broker | CS-6 | Implemented | 6 | Suite |
 | 10 | HMI-side range and enumeration check as defence in depth, with a test that an out-of-range publish is refused by the broker | CS-5 | Implemented | 10 | Suite |
@@ -63,7 +63,7 @@ Ordered by priority. Every item names the requirement it moves and the status it
 
 # 4. Out of scope this sprint
 
-Physical CAN hardware, the Raspberry Pi 5 baseline, per-client write authorisation (CS-4), security event logging (CS-7), the fail-visible renderer (SR-6) and the Autoware bridge (FR-22) stay in sprints 3 and 4 as planned in PULSE-StRS-001 section 3.1.
+Six items stay in sprints 3 and 4, as the delivery plan in PULSE-StRS-001 section 3.1 already schedules them: physical CAN hardware, the Raspberry Pi 5 baseline, per-client write authorisation (CS-4), security event logging (CS-7), the fail-visible renderer (SR-6) and the Autoware bridge (FR-22).
 
 # 5. Risks carried into the sprint
 

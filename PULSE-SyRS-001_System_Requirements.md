@@ -56,6 +56,8 @@ Requirement IDs are stable. A withdrawn requirement keeps its number and is mark
 | Partial | Partly met; the gap and its sprint are named |
 | Planned S2 / S3 / S4 | Not yet started; scheduled for that sprint |
 
+Read together, one row looks like this. FR-11 says the HMI shall subscribe to abstract signals only. Its verification code is `T`, so a check either passes or fails rather than being read or argued. Its status is Implemented. Its evidence names the check that proves it, `hmi-purity`, which scans both HMI sources for CAN, DBC and SocketCAN tokens and fails the build if it finds one. Every requirement row in this document is read the same way: what shall happen, how it is proved, where it stands, and what to open to see for yourself.
+
 ## 1.3 System overview
 
 PULSE is an instrument-cluster demonstrator on a standards-based software-defined-vehicle data stack. A KUKSA databroker serves a COVESA VSS 6.0 signal tree with overlays. Providers (a drive-cycle simulator, a camera-based driver monitor, later a CAN feeder and an Autoware bridge) publish into it. Two HMIs built from one visual design, Flutter on Linux and Jetpack Compose on Android Automotive, subscribe from it. Full detail is in PULSE-SAD-001.
@@ -80,8 +82,8 @@ Source: `docs/diagrams/requirements-map.drawio`.
 
 | ID | Requirement | Verification | Status (W3) | Evidence |
 |-------|-----------------------------------|----------|--------------|----------------------------------|
-| FR-6 | The system shall provide a telemetry source that generates physically plausible, correlated vehicle behaviour (speed, engine speed, gear, temperature, fuel, odometer) without any vehicle hardware. | D | Implemented | `emulator/telemetry_sim.py`: lap and cruise cycles, gear-dependent acceleration, RPM from speed and gear, fuel and odometer integrated from speed; suite check `live-telemetry` sees speed and RPM change within 3 s |
-| FR-7 | The telemetry source shall run a repeatable cycle so that UI behaviour can be compared across runs and across implementations. | T | Partial | Cycle is a fixed phase table with no randomness, but sampling is wall-clock driven so two runs differ in sample timing. Fixed-step or recorded-log replay planned S4 with the measurement package |
+| FR-6 | The system shall provide a telemetry source that generates physically plausible, correlated vehicle behaviour (speed, engine speed, gear, temperature, fuel, odometer) without any vehicle hardware. | D | Implemented | `emulator/telemetry_sim.py`: lap and cruise cycles with correlated RPM, fuel and odometer. Suite check `live-telemetry` passes |
+| FR-7 | The telemetry source shall run a repeatable cycle so that UI behaviour can be compared across runs and across implementations. | T | Partial | Phase table is fixed with no randomness, but sampling is wall-clock driven, so runs differ in timing. Fixed-step replay in S4 |
 | FR-8 | The telemetry source shall be replaceable by a real vehicle-bus provider without modification to any HMI code. | T | Partial | Met by design (HMIs subscribe to VSS paths only); verified when the virtual CAN feeder replaces the simulator in S3 |
 
 ## 2.3 Human-machine interface
@@ -92,14 +94,14 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | FR-10 | The HMI shall display motorsport telemetry: current lap number, current and best lap time, aerodynamic (DRS) state, and energy-recovery (ERS) level and state. | D | Implemented | `Vehicle.Motorsport.*` overlay signals rendered by both HMIs |
 | FR-11 | The HMI shall subscribe to abstract signals only. It shall not contain CAN frame parsing, DBC knowledge, or hardware-specific decoding. | T | Implemented | Regression suite check `hmi-purity` scans both HMI sources for CAN, DBC and SocketCAN tokens; passing, report in `docs/evidence/` |
 | FR-12 | The HMI shall be implemented twice, once in Flutter for Linux and once in Compose for Android Automotive, from a single shared visual design. | I | Implemented | `pulse-cluster/` (Flutter) and `pulse-cluster-android/` (Compose); design source in `design/` |
-| FR-13 | Both implementations shall consume the identical signal source, so any observed difference is attributable to the platform, not the data. | D | Implemented | Both subscribe to the same broker on port 55555 via kuksa.val.v1 |
+| FR-13 | Both implementations shall consume the identical signal source, so any observed difference is attributable to the platform, not the data. | D | Partial | Same broker and protocol for both. Signal sets have diverged: Flutter subscribes to 28 paths, Compose to 17. The nine extra are the driver-monitoring and hazard signals. Closing in S2 |
 | FR-14 | The HMI shall render full-screen on the target strip display, and shall degrade gracefully to a normal window when that display is absent. | D | Implemented | `run.sh` locates a 2560 x 720 output at runtime and passes `CLUSTER_GEOM`; unset means a normal window |
 
 ## 2.4 Comparison and evidence
 
 | ID | Requirement | Verification | Status (W3) | Evidence |
 |-------|-----------------------------------|----------|--------------|----------------------------------|
-| FR-15 | The system shall support measurement of both implementations under identical telemetry: CPU utilisation, memory footprint, and shipped artefact size. | T | Partial | Measured once by hand (BRIEF.md key result: 123 MB vs 46 MB app memory, 12.2 % vs 11.5 % CPU, 50 MB vs 23 MB artefact). Scripted, repeatable benchmark planned S4 |
+| FR-15 | The system shall support measurement of both implementations under identical telemetry: CPU utilisation, memory footprint, and shipped artefact size. | T | Partial | Measured once by hand: 123 vs 46 MB memory, 12.2 vs 11.5 % CPU, 50 vs 23 MB artefact (`BRIEF.md`). Scripted benchmark in S4 |
 | FR-16 | Measurements shall distinguish application-level cost from platform-level cost, since these drive different procurement decisions. | A | Partial | Platform memory reported separately (AAOS 3.2 to 4.0 GB from emulator); target-hardware figures planned S3 to S4 |
 | FR-17 | Results shall be documented such that a reviewer can reproduce them from the repository. | T | Planned S4 | Benchmark script and results file to be committed under `docs/` |
 
@@ -108,8 +110,8 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | ID | Requirement | Verification | Status (W3) | Evidence |
 |-------|-----------------------------------|----------|--------------|----------------------------------|
 | FR-18 | The system shall derive driver fatigue and distraction levels from a driver-facing camera using inference executed entirely on the local device, and publish them as VSS driver signals. | D | Implemented | `emulator/dms.py`: MediaPipe FaceLandmarker on CPU; publishes `Vehicle.Driver.FatigueLevel`, `DistractionLevel`, `AttentiveProbability`, `IsEyesOnRoad` at 10 Hz |
-| FR-19 | The system shall maintain a driver alert state (NONE, DROWSY, DISTRACTED, NO_FACE) with a configurable hold time before raising and clear time before releasing an alert, so that momentary events do not flicker the display. | T | Implemented | `DMS_ALERT_HOLD_S` 3.0 s, `DMS_ALERT_CLEAR_S` 2.0 s; state published as `Vehicle.Driver.Monitoring.AlertState` |
-| FR-20 | When in cruise mode and the alert state is DROWSY, the vehicle model shall execute a minimum-risk manoeuvre: a countdown during which driver recovery aborts the manoeuvre, then hazard lights and controlled braking to standstill, then automatic resume after sustained attention. | T | Implemented | `telemetry_sim.py` cruise mode: 5 s countdown, 22 km/h/s deceleration, resume after 5 s attentive; states published as `Vehicle.Driver.Monitoring.InterventionState` and `InterventionCountdown`. Specified as a safety mechanism in PULSE-SAF-001 SM-3 |
+| FR-19 | The system shall maintain a driver alert state of NONE, DROWSY, DISTRACTED or NO_FACE. It shall raise an alert only after a configurable hold time, and release it only after a configurable clear time, so a momentary event does not flicker the display. | T | Implemented | `DMS_ALERT_HOLD_S` 3.0 s, `DMS_ALERT_CLEAR_S` 2.0 s; published as `Vehicle.Driver.Monitoring.AlertState` |
+| FR-20 | When cruise mode is active and the alert state is DROWSY, the vehicle model shall execute the minimum-risk manoeuvre specified in PULSE-SAF-001 SM-3, which the driver can abort by recovering attention during the countdown. | T | Implemented | `telemetry_sim.py` cruise mode implements SM-3; published as `Vehicle.Driver.Monitoring.InterventionState` and `InterventionCountdown` |
 | FR-21 | The HMI shall render the driver attention level, the active alert as a full-width banner distinguishable by colour per alert type, and the intervention countdown. | D | Implemented | Attention panel and banner in `pulse_screen.dart`; attention meter in `classic_screen.dart` |
 
 ## 2.6 Autonomy provider
@@ -139,7 +141,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | NFR-5 | Reproducibility: a new engineer shall be able to bring up the full stack on a clean machine from documentation alone. | T | Implemented | Clean-machine bring-up performed 2026-08-18 and recorded in ONBOARDING.md, six blockers closed |
 | NFR-6 | Openness: the stack shall be built from open-source components, with no proprietary runtime licence required for evaluation. | I | Implemented | KUKSA (Apache-2.0), VSS (MPL-2.0), Flutter (BSD), MediaPipe (Apache-2.0), AOSP; NOTICE file for the face model |
 | NFR-7 | Determinism: repeated runs of the same cycle shall produce the same signal sequence, so comparisons are valid. | T | Partial | Same as FR-7: value sequence is deterministic in shape, sample timing is not. Fixed-step replay planned S4 |
-| NFR-8 | Maintainability: upstream components shall be consumed at pinned versions, not floating heads. | I | Partial | `kuksa-client==0.5.2` and Python deps pinned in `requirements.txt`; VSS pinned to v6.0; Dart deps locked in `pubspec.lock`. Gaps: databroker image tag `latest`, Flutter SDK version unpinned. Closing in S2 |
+| NFR-8 | Maintainability: upstream components shall be consumed at pinned versions, not floating heads. | I | Partial | Broker pinned to `0.7.0` by tag and digest; `kuksa-client==0.5.2` and Python deps in `requirements.txt`; VSS at v6.0; Dart deps in `pubspec.lock`. Remaining gap: the Flutter SDK version. Closing in S2 |
 
 # 5. Constraints and assumptions
 
@@ -147,11 +149,6 @@ Constraints C-1 to C-5 and assumptions A-1 to A-3 are owned by PULSE-StRS-001 se
 
 # 6. Requirement summary at week 3
 
-| Group | Implemented | Partial | Planned | Total |
-|----------------------------|------------------|------------------|------------------|------------------|
-| Functional FR | 16 | 4 | 2 | 22 |
-| Interface IR | 4 | 1 | 0 | 5 |
-| Non-functional NFR | 4 | 2 | 2 | 8 |
-| **Total** | **24** | **7** | **4** | **35** |
+The counts are not repeated here. PULSE-RTM-001 section 1 computes them from the requirement rows in this document every time the documents are built, so it is always current and this page could only drift away from it.
 
-Safety (SR) and security (CS) requirements are summarised in their own documents. The generated PULSE-RTM-001 recomputes this table from the source rows and is the authoritative count.
+That matrix also covers safety (SR) and security (CS) requirements, which live in PULSE-SAF-001 and PULSE-SEC-001.

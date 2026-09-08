@@ -34,6 +34,8 @@ The stack is a broker on an internal network with two consumers, two providers a
 
 Nothing in this document has been reviewed by a security manager. Ratings are the project engineer's proposals.
 
+Abbreviations used here are defined in the glossary, PULSE-StRS-001 section 8.
+
 # 2. Item and trust boundaries (CS-2)
 
 ![Item and trust boundaries in the development configuration, with the planned untrusted inputs.](diagrams/pulse-trust-boundaries.png)
@@ -47,7 +49,7 @@ Source: `docs/diagrams/pulse-trust-boundaries.drawio` (edit in draw.io, re-expor
 | Vehicle bus | Off-device (planned) | Not present | Untrusted; every decoded value range-checked (CS-5) |
 | Autonomy stack | Off-device (planned) | Not present | Untrusted; same treatment as the bus |
 | ADB reverse to the emulator | Development only | Trusted | Removed on target; the Android surface reaches the broker over an authenticated channel |
-| Container image registry | Off-device | Image pulled at tag `latest` | Pinned digest, verified (CS-8) |
+| Container image registry | Off-device | Pinned to the 0.7.0 tag and digest | Signature verification (CS-8) |
 
 # 3. Assets
 
@@ -76,7 +78,7 @@ Source: `docs/diagrams/tara-map.drawio`.
 | T-3 | Interception or modification of gRPC traffic | Signals | Low on loopback; high once off-device | Severe | 4 at target | CS-3: mutual TLS before any off-device client |
 | T-4 | Tampered signal catalogue mounted into the broker | Catalogue | Medium (file on disk, read-only mount) | Major | 3 | CS-8, CS-9: catalogue checksum in the regression suite; FR-3 reproducibility |
 | T-5 | Camera frames exfiltrated or persisted by a modified driver monitor | Camera frames | Low | Severe (privacy) | 3 | CS-6: code review and a test that no file is written; process has no network beyond loopback |
-| T-6 | Malicious or vulnerable dependency (Python package, Dart package, container image) | Dependencies | Medium (`latest` tag, no SBOM) | Major | 4 | CS-8: pinned digests, SBOM, vulnerability check |
+| T-6 | Malicious or vulnerable dependency (Python package, Dart package, container image) | Dependencies | Medium (no SBOM) | Major | 4 | CS-8: pinned digests, SBOM, vulnerability check |
 | T-7 | Flooding the broker with writes to starve subscribers | Availability | High | Major | 4 | CS-4 limits writers; rate limiting is backlog; staleness detection (SR-4) keeps the display honest |
 | T-8 | Spoofed CAN frames on the bus once the CAN provider exists | Safety-relevant signals | Medium on a physical bus | Severe | 4 | CS-5: range and plausibility checks; bus-level security is outside the item |
 | T-9 | Unauthenticated software update replaces the cluster bundle | Artefacts | Medium | Severe | 4 | CS-10: signed packages, rollback on failure |
@@ -90,7 +92,7 @@ Source: `docs/diagrams/tara-map.drawio`.
 | Catalogue validation of incoming values | CS-5 | Broker rejects wrong datatype, disallowed enumerations and out-of-range values on set | Sprint 2: HMI-side check as defence in depth; test that an out-of-range publish is refused |
 | Camera data stays local | CS-6 | Driver monitor never writes frames and publishes derived state only | Sprint 2: test asserting no file output and no socket other than the broker |
 | Security event logging | CS-7 | None | Sprint 3: broker and provider logs for authentication failure, refused write, client disconnect; timestamped; no personal data |
-| Dependency pinning and SBOM | CS-8 | Python pinned in `requirements.txt`; Dart locked in `pubspec.lock`; container at `latest`; no SBOM | Sprint 2: pin the image digest; generate a CycloneDX SBOM per component; run a vulnerability check in the regression suite |
+| Dependency pinning and SBOM | CS-8 | Python pinned in `requirements.txt`; Dart locked in `pubspec.lock`; broker image digest-pinned; no SBOM | Sprint 2: pin the image digest; generate a CycloneDX SBOM per component; run a vulnerability check in the regression suite |
 | No secrets in the repository | CS-9 | No credentials exist; nothing to leak | Sprint 2: secret scan in the regression suite; development certificates clearly named and gitignored where private |
 | Update concept | CS-10 | None | Sprint 4: section 6 completed |
 
@@ -111,18 +113,27 @@ Source: `docs/diagrams/update-flow.drawio`.
 
 | ID | Requirement | Verification | Status (W3) | Evidence |
 |-------|-----------------------------------|----------|--------------|----------------------------------|
-| CS-1 | A threat analysis and risk assessment (TARA) shall be recorded for the signal path, covering the broker, both HMI clients, the telemetry provider and the camera input, with attack feasibility rated per threat scenario (ISO/SAE 21434-15). | I | Partial | Section 4, nine scenarios; not yet security-reviewed |
+| CS-1 | A threat analysis and risk assessment (TARA) shall be recorded for the signal path, covering the broker, both HMI clients, the telemetry provider and the camera input. Each threat scenario shall carry an attack feasibility rating, as ISO/SAE 21434 clause 15 requires. | I | Partial | Section 4, nine scenarios |
 | CS-2 | The item boundary and its trust boundaries shall be documented, distinguishing on-device interfaces from anything reachable off the device. | I | Implemented | Section 2 |
 | CS-3 | Broker communication shall support authenticated, encrypted transport (mutual TLS). Running without it shall be a configuration reserved for local development and flagged at start-up. | T | Planned S2 | Section 5; `--insecure` in `scripts/start-databroker.sh` today |
 | CS-4 | Write access to the signal tree shall be authorised per client. A consumer shall not be able to publish, and no client shall write outside its declared signal set. | T | Planned S3 | Section 5 |
 | CS-5 | Signal values received from any provider shall be range- and type-validated against the catalogue before display, so a compromised provider cannot drive arbitrary content onto the cluster. | T | Partial | Broker-side validation implemented by KUKSA; HMI-side check and test in S2 |
 | CS-6 | Camera frames shall not leave the device and shall not be persisted. Only derived state, such as the drowsiness level, shall be published. | I | Implemented | `emulator/dms.py` publishes six derived signals and writes no files; test in S2 |
 | CS-7 | Security-relevant events, including authentication failure, unauthorised write attempt and client disconnection, shall be logged with a timestamp and without personal data. | T | Planned S3 | Section 5 |
-| CS-8 | All third-party dependencies shall be pinned and inventoried as a software bill of materials, and the inventory shall be checkable against published vulnerabilities. | T | Partial | Python and Dart pinned; container image at `latest`; no SBOM. S2 |
+| CS-8 | All third-party dependencies shall be pinned and inventoried as a software bill of materials, and the inventory shall be checkable against published vulnerabilities. | T | Partial | Python, Dart and the broker image pinned. No SBOM yet. S2 |
 | CS-9 | No credential, key or certificate shall be committed to the repository; the development configuration shall use clearly marked non-production material. | T | Implemented | Suite check `secrets` scans every tracked file for key and credential patterns; passing |
-| CS-10 | An update concept shall be described for cluster and monitor software, covering authenticity of the package and behaviour on a failed update, as required for type approval under UNECE R155 and R156. | I | Planned S4 | Section 6 outline |
+| CS-10 | An update concept shall be described for the cluster and monitor software. It shall cover package authenticity and the behaviour on a failed update, as UNECE R155 and R156 require for type approval. | I | Planned S4 | Section 6 outline |
 | CS-11 | Cybersecurity requirements shall be verified as part of the sprint regression suite, not as a separate end-of-project activity. | T | Partial | Suite exists (`scripts/regression.sh`) with range and secret checks for CS-5 and CS-9; CS-6 and CS-8 checks join in S2 |
 
 # 8. Verification in the regression suite (CS-11)
 
-From sprint 2 the regression suite run before every demo includes: catalogue checksum (T-4), out-of-range publish refused (CS-5), driver monitor writes no files and opens no socket other than the broker (CS-6), dependency vulnerability check against the SBOM (CS-8), secret scan (CS-9), and, once CS-3 lands, a check that the broker refuses a plaintext client unless the development flag is set.
+From sprint 2 the regression suite runs before every demo. It carries these checks:
+
+| Check | What it asserts | Covers |
+|--------------------|---------------------------------------------------------------------------|--------------|
+| Catalogue checksum | The compiled signal tree is the one that was reviewed | T-4 |
+| Range check | The broker refuses a publish outside the catalogue range | CS-5 |
+| Monitor isolation | The driver monitor writes no file and opens no socket except the broker | CS-6 |
+| Dependency scan | No component has a known vulnerability, checked against the SBOM | CS-8 |
+| Secret scan | No key or credential appears in any tracked file | CS-9 |
+| Plaintext refusal | The broker refuses an unencrypted client unless the development flag is set | CS-3, once it lands |

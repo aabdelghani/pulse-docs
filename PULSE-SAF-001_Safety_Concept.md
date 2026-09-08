@@ -34,6 +34,8 @@ The PULSE demonstrator is not a qualified safety item and no ASIL is claimed. Th
 
 Every rating in the hazard analysis is a proposal by the project engineer and has not been reviewed by a safety manager. Ratings are recorded so that a reviewer has something concrete to disagree with.
 
+Abbreviations used here are defined in the glossary, PULSE-StRS-001 section 8.
+
 # 2. Item definition (SR-1)
 
 | Field | Content |
@@ -42,7 +44,7 @@ Every rating in the hazard analysis is a proposal by the project engineer and ha
 | Purpose | Present vehicle state to the driver on a strip display; detect driver drowsiness and distraction from a driver-facing camera; on sustained drowsiness, trigger a minimum-risk manoeuvre |
 | Functions | F1 display of road speed, engine speed, gear, fuel, range, tyre pressures, indicators. F2 display of motorsport telemetry. F3 driver-state estimation and alerting. F4 minimum-risk manoeuvre trigger and status display |
 | System boundary | As PULSE-SAD-001 section 3.1: catalogue, broker, providers, both HMIs, orchestration |
-| Assumed vehicle context | Passenger car or race car with a single driver; cluster is the primary source of speed and gear information; a separate motion controller executes braking on a real vehicle (on the desk rig the simulator stands in) |
+| Assumed vehicle context | A passenger car or race car with a single driver. The cluster is the primary source of speed and gear information. On a real vehicle a separate motion controller executes braking; on the desk rig the simulator stands in for it |
 | Interfaces crossing the boundary | Camera frames in (V4L2); display surface out (DisplayPort); vehicle bus in (SocketCAN, planned); autonomy stack in (planned); Android surface out |
 | Operational situations | Highway cruise, urban driving, track driving, standstill; day and night (night is backlog for the camera) |
 | Assumptions on other elements | The vehicle bus delivers correct signals. The motion controller executes a commanded stop safely. The display panel renders what it is sent |
@@ -66,7 +68,9 @@ Freshness is not yet enforced in either HMI (SR-4, SR-5 status below). The broke
 
 # 4. Preliminary hazard analysis and risk assessment (SR-2)
 
-Ratings follow ISO 26262-3 severity S0 to S3, exposure E0 to E4, controllability C0 to C3. The ASIL column is the table lookup, not a claim.
+Ratings follow ISO 26262-3: severity S0 to S3, exposure E0 to E4, controllability C0 to C3. The ASIL column is what the standard's table returns for that combination. It is a lookup, not a claim about the software.
+
+Worked example, reading H-7 below, the highest rating in the table. The malfunction is a false detection of drowsiness that starts the manoeuvre while the driver is attentive. The effect is unintended braking in moving traffic, which can injure severely, so severity is S3. It applies during highway cruise, which almost every drive includes, so exposure is E4. A driver who is alert can react and override, so controllability is C2, not C3. S3 with E4 and C2 returns ASIL C. Every other row reads the same way.
 
 | ID | Malfunction | Operational situation | Effect | S | E | C | ASIL proposal | Safety goal |
 |-----|-----------------|---------------|-----------------|---|---|---|-------|------------------------------|
@@ -93,7 +97,7 @@ Each HMI shall track the broker timestamp of every safety-relevant signal and co
 
 ## SM-2 Fail visibly (SR-6)
 
-A rendering fault shall not present a plausible but wrong value. Proposed approach for the demonstrator: a heartbeat glyph on the cluster that the renderer toggles every frame from the signal timestamp, so a frozen renderer is visible within one second; and a self-check that the drawn speed numeral equals the state value. A production programme would need a qualified renderer or an output-verifying supervisor (DD-1 in PULSE-SAD-001). Planned sprint 3.
+A rendering fault shall not present a plausible but wrong value. Two mechanisms are proposed for the demonstrator. First, a heartbeat glyph that the renderer toggles every frame from the signal timestamp, so a frozen renderer becomes visible within one second. Second, a self-check that the speed numeral actually drawn matches the state value. A production programme would need more than this: a qualified renderer, or a supervisor that verifies the output (DD-1 in PULSE-SAD-001). Planned sprint 3.
 
 ## SM-3 Minimum-risk manoeuvre on sustained drowsiness (SR-7)
 
@@ -146,7 +150,7 @@ Held in PULSE-SAD-001 section 8, decisions DD-1 to DD-11. The ones that would bl
 
 | ID | Requirement | Verification | Status (W3) | Evidence |
 |-------|-----------------------------------|----------|--------------|----------------------------------|
-| SR-1 | An item definition shall be written for the cluster and driver-monitoring function, naming the system boundary, the assumed vehicle context, and the interfaces crossing that boundary (ISO 26262-3). | I | Partial | Section 2 of this document; not yet safety-reviewed |
+| SR-1 | An item definition shall be written for the cluster and driver-monitoring function, naming the system boundary, the assumed vehicle context, and the interfaces crossing that boundary (ISO 26262-3). | I | Partial | Section 2 of this document |
 | SR-2 | A preliminary hazard analysis and risk assessment (HARA) shall be recorded for the displayed functions, with severity, exposure and controllability rated per malfunction and a resulting ASIL proposal. | I | Partial | Section 4; eight hazards rated; review in S2 |
 | SR-3 | Signals whose corruption or loss could mislead the driver (road speed, gear, warning indicators, drowsiness alert) shall be identified as safety-relevant and listed explicitly. | I | Implemented | Section 3 |
 | SR-4 | The system shall detect loss of a safety-relevant signal, including broker disconnection and stale values, and shall indicate the degraded state rather than continuing to display the last known value. | T | Planned S2 | SM-1; Flutter service reconnects but shows last value today |

@@ -89,7 +89,7 @@ A racing UI is deliberately the worst case: high refresh rate, dense simultaneou
 
 ## 3.1 Delivery plan
 
-Five work packages across four three-week sprints, each closing with a demo that is the acceptance gate for that sprint's release. The second row of each column lists what this specification expects to land in that sprint, so the sponsor can check each gate against the requirement status columns in PULSE-SyRS-001, PULSE-SAF-001 and PULSE-SEC-001.
+Five work packages across four three-week sprints, each closing with a demo that is the acceptance gate for that sprint's release. Each column is one sprint. Its second row lists what this specification expects to land by that gate. A sponsor can therefore check any gate against the status columns in PULSE-SyRS-001, PULSE-SAF-001 and PULSE-SEC-001.
 
 ![Work packages, gates, and what each sprint delivers against the numbered requirements.](diagrams/delivery-plan.png)
 
@@ -201,3 +201,22 @@ The week 3 review on 4 September 2026 is the acceptance gate for the sprint 1 re
 | Strip display | A 2560 x 720 automotive-aspect panel; on the desk rig a Corsair Xeneon Edge |
 | TARA | Threat analysis and risk assessment, ISO/SAE 21434 |
 | VSS | COVESA Vehicle Signal Specification, the standard signal catalogue |
+| ASIL | Automotive Safety Integrity Level, A to D, ISO 26262. The output of the hazard rating, not a claim about the software |
+| S, E, C | The three hazard ratings that produce an ASIL: severity of harm, exposure to the situation, controllability by the driver |
+| SOTIF | Safety of the intended functionality, ISO 21448. Harm from performance limits rather than from a fault |
+| QM element | A component managed to normal quality practice, with no ASIL claim attached |
+| Tool qualification | Evidence that a development tool cannot silently introduce an error into the product |
+| PERCLOS | Percentage of eye closure over a time window, the standard drowsiness measure |
+| Microsleep | An involuntary lapse into sleep lasting a few seconds, detected here as a sustained eye closure |
+| DBC | The CAN database format that maps raw bus frames to named, scaled values |
+| SocketCAN | The Linux kernel interface that presents a CAN bus as a network socket |
+| V4L2 | Video4Linux2, the Linux kernel interface for camera capture |
+| BSP | Board support package, the vendor code that boots Linux on a specific SoC |
+| MCAL | Microcontroller abstraction layer, the lowest AUTOSAR driver layer |
+| DRM/KMS | The Linux kernel display interface a cluster renders through without a desktop |
+| SBOM | Software bill of materials, the list of components shipped in a build |
+| CycloneDX | A standard SBOM file format |
+| JWT | JSON Web Token, a signed token used here to authorise broker clients |
+| A/B slots | Two system partitions, so a failed update falls back to the previous one |
+| RXSWIN | The software identifier a type approval is granted against, UNECE R156 |
+| SWAD | Software architecture description, the ASPICE work product PULSE-SAD-001 corresponds to |

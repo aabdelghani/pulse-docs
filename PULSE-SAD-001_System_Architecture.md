@@ -33,6 +33,8 @@ This document describes the architecture that satisfies PULSE-SyRS-001. It is th
 
 It is a system-level description. Per-component software architecture (SWAD) is deferred to sprint 2 for the cluster and the providers.
 
+Abbreviations used here are defined in the glossary, PULSE-StRS-001 section 8.
+
 # 2. Architectural principle
 
 Every component meets every other component only at the signal broker, and only through named signals from a standard catalogue. No component knows the others exist. Above the broker there is no CAN, no DBC and no hardware. Below the broker there is no user interface.
@@ -130,7 +132,17 @@ The signal contract is the set of VSS paths a consumer may rely on. It is listed
 
 ## 5.4 Worked example: one signal, bottom to top
 
-A wheel-speed frame arrives on SPI, the provider decodes it with the DBC and renames it to a VSS path, the broker validates and stores it, and every subscriber is pushed the new value over its open gRPC stream. gRPC exists only above the abstraction line; below it there is no RPC at all.
+Follow one value, a road speed of 87.4 km/h, from the wire to the dial. It travels as `Vehicle.Speed`, which appendix A defines as a `float` in km/h. Today the simulator enters at step 3; steps 1 and 2 are the sprint 3 CAN provider.
+
+| Step | What happens | What the value is here |
+|-------|----------------------------------------------------------------------|------------------------------------------|
+| 1 | The powertrain ECU puts the frame carrying `PT_VehicleSpeed` on the bus. SocketCAN hands the raw bytes to user space | Raw bus bytes, meaningless on their own |
+| 2 | The provider applies the scale and offset the DBC defines for that signal, then maps it to a catalogue path. The mapping and its 100 ms interval are in `vss/agl_vss_overlay.vspec` | A number, 87.4, now named `Vehicle.Speed` |
+| 3 | The provider publishes to the broker over gRPC. Today `emulator/telemetry_sim.py` sets the same path at 10 Hz instead | `Vehicle.Speed` = 87.4 |
+| 4 | The broker checks it against the catalogue entry. A wrong type or an out-of-range value is refused and never reaches a consumer (IR-2, CS-5) | `float`, km/h, in range, accepted |
+| 5 | Every open subscription is pushed the value with its timestamp | Flutter and Compose both redraw the dial |
+
+Only steps 1 and 2 know that CAN exists. From step 3 on the value is just a named number, and a consumer cannot tell whether it came from a bus, the simulator or a replayed log. Note also where the protocols stop: gRPC exists only above the line, and below it there is no RPC at all.
 
 ![One signal from the wire to the dial. Steps 01 and 02 are the sprint 3 CAN provider; today the simulator enters at step 03.](diagrams/signal-path.png)
 
@@ -215,7 +227,7 @@ Recorded here because PULSE-SAF-001 SR-10 requires every decision that could blo
 | DD-7 | Window system on the desk rig: X11 with `xrandr` placement | Development host convenience | Target uses Wayland; the runner reads `CLUSTER_GEOM` so placement logic does not change |
 | DD-8 | Driver monitor runs on CPU, no accelerator | 6.5 ms per frame is already inside budget; avoids hardware dependence (A-2) | A production DMS would still need an infrared camera and a qualified evaluation set (backlog) |
 | DD-9 | Safety-loop actuation lives in the simulator | No vehicle exists; the manoeuvre must be demonstrable | On a real vehicle the actuation moves to a motion controller; the trigger signal contract stays |
-| DD-10 | Databroker image consumed at tag `latest` | Convenience at project start | Violates NFR-8; pin to the 0.7.0 digest in sprint 2 |
+| DD-10 | Databroker image consumed at tag `latest` | Convenience at project start | Closed: pinned to the 0.7.0 tag and digest in `scripts/start-databroker.sh` |
 | DD-11 | Flutter SDK version not pinned | Convenience at project start | Violates NFR-8; pin via FVM or a recorded version in sprint 2 |
 
 # 9. Verification approach
