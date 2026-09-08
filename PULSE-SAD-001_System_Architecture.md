@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "System Architecture Description"
 author: "Ahmed Abdelghany"
-date: "2026-09-03"
+date: "2026-09-08"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-03"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SAD-001 |
 | Title | System Architecture Description |
-| Version | 1.1 |
+| Version | 1.2 |
 | Status | Baseline for sprint 1 review |
-| Date | 2026-09-03 |
+| Date | 2026-09-08 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -26,6 +26,7 @@ date: "2026-09-03"
 |--------|----------|--------------|--------------------------------------------------------------------|
 | 1.0 | 2026-09-03 | A. Abdelghany | First baseline, written from the running system: context, components, interfaces, runtime, deployment, decisions and deviations, signal contract appendix |
 | 1.1 | 2026-09-03 | A. Abdelghany | Layering, worked signal path (new section 5.4), runtime loop, manoeuvre state machine and deployment diagrams added; architecture principle diagram moved to draw.io |
+| 1.2 | 2026-09-08 | A. Abdelghany | Section 5.4 worked example now traces one road speed from the bus to the dial with real signal names and values. DD-10 closed: the databroker image is pinned by tag and digest. Glossary pointer added |
 
 # 1. Purpose and scope
 

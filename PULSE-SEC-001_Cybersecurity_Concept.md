@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Cybersecurity Concept, preliminary (ISO/SAE 21434, UNECE R155)"
 author: "Ahmed Abdelghany"
-date: "2026-09-03"
+date: "2026-09-08"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-03"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SEC-001 |
 | Title | Cybersecurity Concept, preliminary |
-| Version | 0.9.2 |
+| Version | 0.9.3 |
 | Status | Skeleton for sprint 1 review; not security-reviewed |
-| Date | 2026-09-03 |
+| Date | 2026-09-08 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Security manager, not yet assigned |
 | Review gate | Sprint 1 review for structure; sprint 2 review for content |
@@ -27,6 +27,7 @@ date: "2026-09-03"
 | 0.9 | 2026-09-03 | A. Abdelghany | First skeleton: item and trust boundaries, assets, preliminary TARA, controls, development-configuration deviations, update concept outline, CS-1 to CS-11 with status |
 | 0.9.1 | 2026-09-03 | A. Abdelghany | Threat map and update-flow diagrams added; trust-boundary diagram moved to draw.io |
 | 0.9.2 | 2026-09-03 | A. Abdelghany | CS-9 and CS-11 status updated for the regression suite |
+| 0.9.3 | 2026-09-08 | A. Abdelghany | Section 8 check list turned into a table. CS-1 and CS-10 reworded. CS-8, the asset table and threat T-6 updated: the broker image is pinned, so only the SBOM gap remains. Glossary pointer added |
 
 # 1. Purpose and proportionality
 

@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Functional Safety Concept, preliminary (ISO 26262)"
 author: "Ahmed Abdelghany"
-date: "2026-09-03"
+date: "2026-09-08"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-03"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SAF-001 |
 | Title | Functional Safety Concept, preliminary |
-| Version | 0.9.2 |
+| Version | 0.9.3 |
 | Status | Skeleton for sprint 1 review; not safety-reviewed |
-| Date | 2026-09-03 |
+| Date | 2026-09-08 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Safety manager, not yet assigned |
 | Review gate | Sprint 1 review for structure; sprint 2 review for content |
@@ -27,6 +27,7 @@ date: "2026-09-03"
 | 0.9 | 2026-09-03 | A. Abdelghany | First skeleton: item definition, safety-relevant signals with freshness proposals, preliminary HARA, safety mechanisms including the minimum-risk manoeuvre, interference argument outline, qualification gap list, SR-1 to SR-11 with status |
 | 0.9.1 | 2026-09-03 | A. Abdelghany | Safety-mechanism placement and manoeuvre state-machine diagrams added |
 | 0.9.2 | 2026-09-03 | A. Abdelghany | SR-9 evidence updated for the regression suite |
+| 0.9.3 | 2026-09-08 | A. Abdelghany | Worked ASIL derivation added for H-7 so the S, E and C columns can be read without knowing the method. SM-2 and the item-definition context reworded. SR-1 evidence tightened. Glossary pointer added |
 
 # 1. Purpose and disclaimer
 

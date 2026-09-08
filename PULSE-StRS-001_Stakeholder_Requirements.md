@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Stakeholder Requirements Specification and User Stories"
 author: "Ahmed Abdelghany"
-date: "2026-09-03"
+date: "2026-09-08"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-03"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-StRS-001 |
 | Title | Stakeholder Requirements Specification and User Stories |
-| Version | 1.1 |
+| Version | 1.2 |
 | Status | Draft frozen for review |
-| Date | 2026-09-03 |
+| Date | 2026-09-08 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -27,6 +27,7 @@ date: "2026-09-03"
 | 0.1 | 2026-08-25 | A. Abdelghany | First draft, single combined document |
 | 1.0 | 2026-09-03 | A. Abdelghany | Split into the document set; stakeholder needs added; stories traced to needs and system requirements; frozen for sprint 1 review |
 | 1.1 | 2026-09-03 | A. Abdelghany | Document-set map, delivery plan and needs-to-epics diagrams added; section 3.1 added |
+| 1.2 | 2026-09-08 | A. Abdelghany | Glossary expanded from 11 to 30 terms so that ASIL, PERCLOS, DBC, SBOM, SWAD and the S/E/C ratings are defined before they are used; delivery-plan wording clarified |
 
 ## Document set
 

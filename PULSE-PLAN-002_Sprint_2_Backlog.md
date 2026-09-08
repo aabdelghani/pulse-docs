@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Sprint 2 Backlog"
 author: "Ahmed Abdelghany"
-date: "2026-09-03"
+date: "2026-09-08"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-03"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-PLAN-002 |
 | Title | Sprint 2 Backlog |
-| Version | 0.1 |
+| Version | 0.2 |
 | Status | Draft for the sprint 1 review; frozen after review feedback is merged |
-| Date | 2026-09-03 |
+| Date | 2026-09-08 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Sprint window | Week 4 to week 6, 7 September to 25 September 2026 |
@@ -25,6 +25,7 @@ date: "2026-09-03"
 | Version | Date | Author | Change |
 |--------|----------|--------------|--------------------------------------------------------------------|
 | 0.1 | 2026-09-03 | A. Abdelghany | First draft from the delivery plan and the week-3 status columns; review feedback section left open |
+| 0.2 | 2026-09-08 | A. Abdelghany | Document-control fields corrected so the review gate and related documents resolve. Item 7 reduced to Partial: the databroker digest is pinned, the Flutter SDK version is not. Sprint goal and out-of-scope wording clarified |
 
 # 1. Sprint goal
 

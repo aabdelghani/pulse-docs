@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "System Requirements Specification"
 author: "Ahmed Abdelghany"
-date: "2026-09-03"
+date: "2026-09-08"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-03"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SyRS-001 |
 | Title | System Requirements Specification |
-| Version | 1.2 |
+| Version | 1.3 |
 | Status | Draft frozen for review |
-| Date | 2026-09-03 |
+| Date | 2026-09-08 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -28,6 +28,7 @@ date: "2026-09-03"
 | 1.0 | 2026-09-03 | A. Abdelghany | Verification method, week-3 status and evidence added per requirement; driver monitoring (FR-18 to FR-21) and autonomy provider (FR-22) added; safety and security requirements moved to PULSE-SAF-001 and PULSE-SEC-001; frozen for review |
 | 1.1 | 2026-09-03 | A. Abdelghany | Requirement-group map added to the system overview |
 | 1.2 | 2026-09-03 | A. Abdelghany | Evidence for FR-3, FR-4, FR-6 and FR-11 now points at the regression suite (`scripts/regression.sh`) and its committed reports |
+| 1.3 | 2026-09-08 | A. Abdelghany | FR-13 corrected to Partial: the two HMIs have diverged to 28 and 17 subscribed signals. NFR-8 and IR-2 evidence updated for the pinned broker image and the new unit-sanity check. FR-19 and FR-20 reworded, FR-20 now citing PULSE-SAF-001 SM-3 instead of restating it. Section 6 count table replaced by a pointer to the generated matrix. Worked requirement row added to section 1.2 |
 
 # 1. Introduction
 
