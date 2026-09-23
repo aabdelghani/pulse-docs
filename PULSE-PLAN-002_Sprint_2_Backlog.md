@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Sprint 2 Backlog"
 author: "Ahmed Abdelghany"
-date: "2026-09-11"
+date: "2026-09-23"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-11"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-PLAN-002 |
 | Title | Sprint 2 Backlog |
-| Version | 0.3 |
+| Version | 0.4 |
 | Status | Draft for the sprint 1 review; frozen after review feedback is merged |
-| Date | 2026-09-11 |
+| Date | 2026-09-23 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Sprint window | Week 4 to week 6, 7 September to 25 September 2026 |
@@ -27,6 +27,7 @@ date: "2026-09-11"
 | 0.1 | 2026-09-03 | A. Abdelghany | First draft from the delivery plan and the week-3 status columns; review feedback section left open |
 | 0.2 | 2026-09-08 | A. Abdelghany | Document-control fields corrected so the review gate and related documents resolve. Item 7 reduced to Partial: the databroker digest is pinned, the Flutter SDK version is not. Sprint goal and out-of-scope wording clarified |
 | 0.3 | 2026-09-11 | A. Abdelghany | Week 4 checkpoint added as section 8: per-item state verified against the repository, hours position, decisions requested. Sprint 1 review recorded as held with no comments |
+| 0.4 | 2026-09-23 | A. Abdelghany | Week 6 checkpoint added as section 8.5: state per item on 23 September, definition of done against the gate, decisions taken while implementing |
 
 # 1. Sprint goal
 
@@ -165,3 +166,39 @@ Add a checkpoint at the end of week 5, one hour, against this same table. A
 three-week sprint whose first status point is the gate itself has no room to
 recover. If week 5 goes the way week 4 did, that should be known on 18
 September rather than on the morning of the demo.
+
+## 8.5 State at the close of week 6
+
+Checked against the repository on 23 September, two days before the gate.
+Nothing landed between the week 4 checkpoint and 23 September; everything
+below landed on 23 September.
+
+| # | Item | Target | State on 23 September | Checked by |
+|----|--------------------------|--------------|----------------------|--------------------------------------|
+| 1 | Regression suite | Implemented | Implemented | 16 checks, `.github/workflows/regression.yml` runs them on every push. Evidence under `docs/evidence/` |
+| 2 | Signal contract test | Implemented | Implemented | `live-contract`: all 28 appendix A paths subscribe and deliver a typed datapoint from the running broker |
+| 3 | UI smoke test per build | Implemented | Partial | Flutter: `test/cluster_smoke_test.dart` renders an injected 87 km/h in gear 4 and asserts it. Compose: unit-tested, no emulator without KVM on this host |
+| 4 | Flutter staleness display | Implemented | Implemented | Degrades within 1 s of broker loss; screen captures and widget tests |
+| 5 | Compose staleness display | Implemented | Partial | Same model in `VssClient.kt`, compiled and unit-tested; not yet seen on a device |
+| 6 | Mutual TLS on the broker | Implemented | Implemented with deviation | TLS and per-client tokens, secure by default; `transport-security` proves the refusals. KUKSA 0.7.0 cannot verify client certificates (SEC section 5, DD-12) |
+| 7 | Pin the Flutter SDK | Partial | Implemented | 3.47.0 in `.fvmrc`, floor in `pubspec.yaml`, `toolchain-pin` check |
+| 8 | SBOM and vulnerability check | Implemented | Implemented | 85 components, OSV clean after Pillow was fixed by moving to Python 3.11 |
+| 9 | Driver-monitor privacy test | Implemented | Partial | `dms-privacy` written; needs AVX to run the monitor, so skips here and runs in CI |
+| 10 | HMI-side range check | Implemented | Implemented | Both HMIs read catalogue limits from the broker and refuse values outside them; `range-refusal` proves the broker refuses first |
+| 11 | Catalogue checksum | Implemented | Implemented | `catalogue-checksum`; a one-character edit fails the run |
+| 12 | Merge the monitoring branch | Done | Done | 4 September |
+| 13 | Architecture write-ups | Implemented | Implemented | PULSE-SWAD-001, one page each for the Flutter cluster and the providers |
+| 14 | Safety and security review | Reviewed | Not held | Needs the two managers; nothing an engineer can do alone |
+| 15 | Virtual CAN feeder spike | Partial | Implemented | `scripts/can_spike.py`: three signals from `vcan0` through AGL's DBC and KUKSA's provider, over TLS, into the catalogue |
+
+Definition of done for the gate (section 7): 1 met; 2 met on Flutter, not
+yet shown on Compose; 3 met with the deviation above; 4 met; 5 the bring-up
+was timed at 3.9 s on a virtual 2560 x 720 screen, the physical strip is
+not on this host.
+
+Decisions taken while implementing, for the review to confirm or reverse:
+Python 3.11 for the providers (the reason is in `requirements.txt`);
+Flutter stays at 3.47.0; freshness is judged by arrival time rather than the
+broker's timestamp (SAF section 3); token authentication stands in for mutual
+TLS (SEC section 5). One finding: the driver monitor cannot run on this VM
+because it exposes no AVX, so the sprint 3 target and the demo host must.

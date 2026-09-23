@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "System Requirements Specification"
 author: "Ahmed Abdelghany"
-date: "2026-09-08"
+date: "2026-09-23"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-08"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SyRS-001 |
 | Title | System Requirements Specification |
-| Version | 1.3 |
+| Version | 1.4 |
 | Status | Draft frozen for review |
-| Date | 2026-09-08 |
+| Date | 2026-09-23 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -29,6 +29,7 @@ date: "2026-09-08"
 | 1.1 | 2026-09-03 | A. Abdelghany | Requirement-group map added to the system overview |
 | 1.2 | 2026-09-03 | A. Abdelghany | Evidence for FR-3, FR-4, FR-6 and FR-11 now points at the regression suite (`scripts/regression.sh`) and its committed reports |
 | 1.3 | 2026-09-08 | A. Abdelghany | FR-13 corrected to Partial: the two HMIs have diverged to 28 and 17 subscribed signals. NFR-8 and IR-2 evidence updated for the pinned broker image and the new unit-sanity check. FR-19 and FR-20 reworded, FR-20 now citing PULSE-SAF-001 SM-3 instead of restating it. Section 6 count table replaced by a pointer to the generated matrix. Worked requirement row added to section 1.2 |
+| 1.4 | 2026-09-23 | A. Abdelghany | Sprint 2 status: IR-5 and NFR-8 Implemented (secure-by-default broker, Flutter SDK pinned), FR-3 regeneration check now executes, FR-8 proven on a virtual bus, FR-13 wording updated, NFR-5 reduced to Partial pending a host with AVX |
 
 # 1. Introduction
 
@@ -75,7 +76,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 |-------|-----------------------------------|----------|--------------|----------------------------------|
 | FR-1 | The system shall represent all vehicle data using an open, standardised signal catalogue (COVESA VSS), not proprietary or bus-specific identifiers. | I | Implemented | `vss/vss_agl.json` compiled from VSS 6.0; 1,302 leaf signals |
 | FR-2 | The system shall extend the standard catalogue for domain-specific signals using the standard overlay mechanism only, with no forks of the upstream specification. | I | Implemented | `vss/agl_vss_overlay.vspec`, `vss/pulse_vss_overlay.vspec`, `vss/dms_vss_overlay.vspec`; upstream spec consumed unmodified |
-| FR-3 | The compiled signal tree shall be reproducible from versioned source files by a documented command. | T | Implemented | README "Regenerate the VSS JSON"; byte-identical regeneration checked by the regression suite (`vss-regeneration`), report in `docs/evidence/` |
+| FR-3 | The compiled signal tree shall be reproducible from versioned source files by a documented command. | T | Implemented | Suite check `vss-regeneration`, byte-identical with vss-tools 6.0 in `.venv-tools`; first executed 2026-09-23, it had skipped before for want of the tool |
 | FR-4 | A central broker shall serve the signal tree and allow multiple independent clients to subscribe concurrently. | D | Implemented | KUKSA databroker 0.7.0; Flutter cluster, Compose cluster and engine-audio service subscribe concurrently; suite check `broker-up` |
 | FR-5 | Signal producers and consumers shall be mutually decoupled: neither needs knowledge of the other's implementation. | I | Implemented | Providers and HMIs share no code, only VSS paths (PULSE-SAD-001 section 4) |
 
@@ -85,7 +86,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 |-------|-----------------------------------|----------|--------------|----------------------------------|
 | FR-6 | The system shall provide a telemetry source that generates physically plausible, correlated vehicle behaviour (speed, engine speed, gear, temperature, fuel, odometer) without any vehicle hardware. | D | Implemented | `emulator/telemetry_sim.py`: lap and cruise cycles with correlated RPM, fuel and odometer. Suite check `live-telemetry` passes |
 | FR-7 | The telemetry source shall run a repeatable cycle so that UI behaviour can be compared across runs and across implementations. | T | Partial | Phase table is fixed with no randomness, but sampling is wall-clock driven, so runs differ in timing. Fixed-step replay in S4 |
-| FR-8 | The telemetry source shall be replaceable by a real vehicle-bus provider without modification to any HMI code. | T | Partial | Met by design (HMIs subscribe to VSS paths only); verified when the virtual CAN feeder replaces the simulator in S3 |
+| FR-8 | The telemetry source shall be replaceable by a real vehicle-bus provider without modification to any HMI code. | T | Partial | Proven on a virtual bus: `scripts/can_spike.py` feeds three frames on `vcan0` through KUKSA's CAN provider and AGL's DBC and they arrive as catalogue signals with no HMI change. Physical bus in S3 |
 
 ## 2.3 Human-machine interface
 
@@ -95,7 +96,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | FR-10 | The HMI shall display motorsport telemetry: current lap number, current and best lap time, aerodynamic (DRS) state, and energy-recovery (ERS) level and state. | D | Implemented | `Vehicle.Motorsport.*` overlay signals rendered by both HMIs |
 | FR-11 | The HMI shall subscribe to abstract signals only. It shall not contain CAN frame parsing, DBC knowledge, or hardware-specific decoding. | T | Implemented | Regression suite check `hmi-purity` scans both HMI sources for CAN, DBC and SocketCAN tokens; passing, report in `docs/evidence/` |
 | FR-12 | The HMI shall be implemented twice, once in Flutter for Linux and once in Compose for Android Automotive, from a single shared visual design. | I | Implemented | `pulse-cluster/` (Flutter) and `pulse-cluster-android/` (Compose); design source in `design/` |
-| FR-13 | Both implementations shall consume the identical signal source, so any observed difference is attributable to the platform, not the data. | D | Partial | Same broker and protocol for both. Signal sets have diverged: Flutter subscribes to 28 paths, Compose to 17. The nine extra are the driver-monitoring and hazard signals. Closing in S2 |
+| FR-13 | Both implementations shall consume the identical signal source, so any observed difference is attributable to the platform, not the data. | D | Partial | Same broker, protocol, catalogue limits and freshness rules for both. Signal sets still differ: Flutter 28 paths, Compose 17; the eleven extra are driver monitoring, hazard and intervention. Decision requested in PULSE-PLAN-002 section 8.3 |
 | FR-14 | The HMI shall render full-screen on the target strip display, and shall degrade gracefully to a normal window when that display is absent. | D | Implemented | `run.sh` locates a 2560 x 720 output at runtime and passes `CLUSTER_GEOM`; unset means a normal window |
 
 ## 2.4 Comparison and evidence
@@ -129,7 +130,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | IR-2 | Signal semantics (units, ranges, allowed enumeration values, and encodings) shall be defined in the signal catalogue, not in client code. | I | Implemented | Units, `allowed` lists and `max` in the `.vspec` overlays; broker rejects out-of-catalogue values on set; suite check `unit-sanity` catches a value published in the wrong unit |
 | IR-3 | The target display interface shall be a 2560 x 720 automotive strip panel. | D | Implemented | Corsair Xeneon Edge on the desk rig; layout designed at 2560 x 720 |
 | IR-4 | Display placement shall be configurable at runtime, not fixed at compilation. | D | Implemented | `CLUSTER_GEOM` environment variable read by the Linux runner; `run.sh` derives it from `xrandr` |
-| IR-5 | The system shall run without transport security in the local development configuration, and the security posture shall be an explicit, documented choice. | I | Partial | `--insecure` set in `scripts/start-databroker.sh`; documented as a deviation in PULSE-SEC-001 section 5. Start-up warning (CS-3) planned S2 |
+| IR-5 | The system shall run without transport security in the local development configuration, and the security posture shall be an explicit, documented choice. | I | Implemented | Secure by default. Plaintext only with `PULSE_INSECURE=1`, which prints a boxed warning at start-up; suite check `transport-security` skips and says so |
 
 # 4. Non-functional requirements
 
@@ -139,10 +140,10 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | NFR-2 | Legibility: primary values (speed, gear, engine speed) shall be readable in a sub-second glance, consistent with driver-distraction practice. | D | Implemented | Design reviewed on the strip; numerals sized for the 720 px height |
 | NFR-3 | Footprint: the Linux implementation shall be deployable on constrained embedded hardware; total platform footprint is a first-class evaluation criterion. | T | Planned S3 | Raspberry Pi 5 baseline, work package 03, week 9 |
 | NFR-4 | Portability: migration to a different SoC or to a Yocto/AGL image shall not require HMI rework. | A | Planned S3 | Argument to be recorded with the Pi 5 baseline; Flutter embedder is the only platform-specific layer |
-| NFR-5 | Reproducibility: a new engineer shall be able to bring up the full stack on a clean machine from documentation alone. | T | Implemented | Clean-machine bring-up performed 2026-08-18 and recorded in ONBOARDING.md, six blockers closed |
+| NFR-5 | Reproducibility: a new engineer shall be able to bring up the full stack on a clean machine from documentation alone. | T | Partial | Bring-up of 2026-08-18 in ONBOARDING.md. On 2026-09-23 a fresh environment from `requirements.txt` ran every provider; the driver monitor additionally needs a CPU with AVX, which this VM lacks. Re-run on the Pi 5 in S3 |
 | NFR-6 | Openness: the stack shall be built from open-source components, with no proprietary runtime licence required for evaluation. | I | Implemented | KUKSA (Apache-2.0), VSS (MPL-2.0), Flutter (BSD), MediaPipe (Apache-2.0), AOSP; NOTICE file for the face model |
 | NFR-7 | Determinism: repeated runs of the same cycle shall produce the same signal sequence, so comparisons are valid. | T | Partial | Same as FR-7: value sequence is deterministic in shape, sample timing is not. Fixed-step replay planned S4 |
-| NFR-8 | Maintainability: upstream components shall be consumed at pinned versions, not floating heads. | I | Partial | Broker pinned to `0.7.0` by tag and digest; `kuksa-client==0.5.2` and Python deps in `requirements.txt`; VSS at v6.0; Dart deps in `pubspec.lock`. Remaining gap: the Flutter SDK version. Closing in S2 |
+| NFR-8 | Maintainability: upstream components shall be consumed at pinned versions, not floating heads. | I | Implemented | Broker by tag and digest; Python by `requirements.txt` on Python 3.11; VSS 6.0 and vss-tools 6.0; Dart by `pubspec.lock`; Flutter 3.47.0 in `.fvmrc`, enforced by suite check `toolchain-pin` |
 
 # 5. Constraints and assumptions
 

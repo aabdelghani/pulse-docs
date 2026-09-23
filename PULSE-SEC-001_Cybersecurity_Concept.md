@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Cybersecurity Concept, preliminary (ISO/SAE 21434, UNECE R155)"
 author: "Ahmed Abdelghany"
-date: "2026-09-08"
+date: "2026-09-23"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-08"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SEC-001 |
 | Title | Cybersecurity Concept, preliminary |
-| Version | 0.9.3 |
+| Version | 0.9.4 |
 | Status | Skeleton for sprint 1 review; not security-reviewed |
-| Date | 2026-09-08 |
+| Date | 2026-09-23 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Security manager, not yet assigned |
 | Review gate | Sprint 1 review for structure; sprint 2 review for content |
@@ -28,6 +28,7 @@ date: "2026-09-08"
 | 0.9.1 | 2026-09-03 | A. Abdelghany | Threat map and update-flow diagrams added; trust-boundary diagram moved to draw.io |
 | 0.9.2 | 2026-09-03 | A. Abdelghany | CS-9 and CS-11 status updated for the regression suite |
 | 0.9.3 | 2026-09-08 | A. Abdelghany | Section 8 check list turned into a table. CS-1 and CS-10 reworded. CS-8, the asset table and threat T-6 updated: the broker image is pinned, so only the SBOM gap remains. Glossary pointer added |
+| 0.9.4 | 2026-09-23 | A. Abdelghany | Sprint 2 controls landed: TLS and token authorisation (CS-3, CS-4), HMI-side range check (CS-5), SBOM with OSV scan (CS-8), privacy trace (CS-6), CI (CS-11). Deviation from mutual TLS recorded in section 5 |
 
 # 1. Purpose and proportionality
 
@@ -88,14 +89,24 @@ Source: `docs/diagrams/tara-map.drawio`.
 
 | Control | Requirement | State today | Removal of the shortcut |
 |------------------|----------|--------------------------------|----------------------------------------|
-| Transport encryption and client authentication | CS-3 | Broker started with `--insecure`, loopback only. The choice is recorded here and as DD-6 in PULSE-SAD-001, satisfying IR-5 | Sprint 2: enable TLS in the databroker with development certificates under `certs/dev/` marked non-production; start-up prints a red warning whenever `--insecure` is used |
-| Per-client write authorisation | CS-4 | None; any client can set any signal | Sprint 3: KUKSA JWT authorisation with one token per provider scoped to its signal set; consumers get read-only tokens |
-| Catalogue validation of incoming values | CS-5 | Broker rejects wrong datatype, disallowed enumerations and out-of-range values on set | Sprint 2: HMI-side check as defence in depth; test that an out-of-range publish is refused |
+| Transport encryption and client authentication | CS-3 | TLS to a development certificate; every client presents a signed token. Plaintext only on request, with a warning (DD-6 closed) | Sprint 2: enable TLS in the databroker with development certificates under `certs/dev/` marked non-production; start-up prints a red warning whenever `--insecure` is used |
+| Per-client write authorisation | CS-4 | Token scopes: consumers read only, providers limited to their own signals | Sprint 3: KUKSA JWT authorisation with one token per provider scoped to its signal set; consumers get read-only tokens |
+| Catalogue validation of incoming values | CS-5 | Broker rejects on set; both HMIs refuse out-of-restriction values as defence in depth | Sprint 2: HMI-side check as defence in depth; test that an out-of-range publish is refused |
 | Camera data stays local | CS-6 | Driver monitor never writes frames and publishes derived state only | Sprint 2: test asserting no file output and no socket other than the broker |
 | Security event logging | CS-7 | None | Sprint 3: broker and provider logs for authentication failure, refused write, client disconnect; timestamped; no personal data |
-| Dependency pinning and SBOM | CS-8 | Python pinned in `requirements.txt`; Dart locked in `pubspec.lock`; broker image digest-pinned; no SBOM | Sprint 2: pin the image digest; generate a CycloneDX SBOM per component; run a vulnerability check in the regression suite |
-| No secrets in the repository | CS-9 | No credentials exist; nothing to leak | Sprint 2: secret scan in the regression suite; development certificates clearly named and gitignored where private |
+| Dependency pinning and SBOM | CS-8 | Everything pinned; CycloneDX SBOM in `docs/sbom/`, scanned against OSV by the suite | Sprint 2: pin the image digest; generate a CycloneDX SBOM per component; run a vulnerability check in the regression suite |
+| No secrets in the repository | CS-9 | Development PKI generated into git-ignored `.run/pki/`; suite scans every tracked file | Sprint 2: secret scan in the regression suite; development certificates clearly named and gitignored where private |
 | Update concept | CS-10 | None | Sprint 4: section 6 completed |
+
+**Deviation from CS-3 as written.** CS-3 names mutual TLS. KUKSA databroker
+0.7.0 can present a server certificate but cannot verify client certificates;
+it has no option for a client CA. Clients are therefore authenticated by a
+signed token carried over the TLS session, which the broker verifies against
+`jwt.pem`. The security goal, that only known clients reach the broker and
+that the link is encrypted and server-authenticated, is met; the mechanism is
+not the one the requirement names. Either the requirement text is changed at
+the sprint 2 review, or a broker with client-certificate support is adopted
+later. Recorded as DD-12 in PULSE-SAD-001.
 
 # 6. Update concept (CS-10)
 
@@ -116,15 +127,15 @@ Source: `docs/diagrams/update-flow.drawio`.
 |-------|-----------------------------------|----------|--------------|----------------------------------|
 | CS-1 | A threat analysis and risk assessment (TARA) shall be recorded for the signal path, covering the broker, both HMI clients, the telemetry provider and the camera input. Each threat scenario shall carry an attack feasibility rating, as ISO/SAE 21434 clause 15 requires. | I | Partial | Section 4, nine scenarios |
 | CS-2 | The item boundary and its trust boundaries shall be documented, distinguishing on-device interfaces from anything reachable off the device. | I | Implemented | Section 2 |
-| CS-3 | Broker communication shall support authenticated, encrypted transport (mutual TLS). Running without it shall be a configuration reserved for local development and flagged at start-up. | T | Planned S2 | Section 5; `--insecure` in `scripts/start-databroker.sh` today |
-| CS-4 | Write access to the signal tree shall be authorised per client. A consumer shall not be able to publish, and no client shall write outside its declared signal set. | T | Planned S3 | Section 5 |
-| CS-5 | Signal values received from any provider shall be range- and type-validated against the catalogue before display, so a compromised provider cannot drive arbitrary content onto the cluster. | T | Partial | Broker-side validation implemented by KUKSA; HMI-side check and test in S2 |
-| CS-6 | Camera frames shall not leave the device and shall not be persisted. Only derived state, such as the drowsiness level, shall be published. | I | Implemented | `emulator/dms.py` publishes six derived signals and writes no files; test in S2 |
+| CS-3 | Broker communication shall support authenticated, encrypted transport (mutual TLS). Running without it shall be a configuration reserved for local development and flagged at start-up. | T | Implemented | TLS with a development certificate and a signed token per client, secure by default in `scripts/start-databroker.sh`; plaintext only with `PULSE_INSECURE=1` and a boxed warning. Suite check `transport-security`. Deviation: token authentication rather than client certificates, section 5 |
+| CS-4 | Write access to the signal tree shall be authorised per client. A consumer shall not be able to publish, and no client shall write outside its declared signal set. | T | Implemented | Token scopes from `scripts/dev_pki.py`: consumers read only; each provider may provide only the signals its source declares. Suite check `transport-security` proves a consumer cannot publish and a provider is refused outside its set |
+| CS-5 | Signal values received from any provider shall be range- and type-validated against the catalogue before display, so a compromised provider cannot drive arbitrary content onto the cluster. | T | Implemented | Broker refuses out-of-catalogue values (suite check `range-refusal`); both HMIs read the catalogue restrictions from the broker at connect and refuse values outside them, tested in `range_check_test.dart` and `FreshnessTest.kt` |
+| CS-6 | Camera frames shall not leave the device and shall not be persisted. Only derived state, such as the drowsiness level, shall be published. | I | Partial | `emulator/dms.py` publishes six derived signals. Suite check `dms-privacy` traces every file and socket call for 12 s; it needs a CPU with AVX to run the monitor, so it skips on the reference VM and runs in CI |
 | CS-7 | Security-relevant events, including authentication failure, unauthorised write attempt and client disconnection, shall be logged with a timestamp and without personal data. | T | Planned S3 | Section 5 |
-| CS-8 | All third-party dependencies shall be pinned and inventoried as a software bill of materials, and the inventory shall be checkable against published vulnerabilities. | T | Partial | Python, Dart and the broker image pinned. No SBOM yet. S2 |
-| CS-9 | No credential, key or certificate shall be committed to the repository; the development configuration shall use clearly marked non-production material. | T | Implemented | Suite check `secrets` scans every tracked file for key and credential patterns; passing |
+| CS-8 | All third-party dependencies shall be pinned and inventoried as a software bill of materials, and the inventory shall be checkable against published vulnerabilities. | T | Implemented | `scripts/sbom.py` writes a CycloneDX inventory of 85 components across Python, Dart, Android and the broker image; suite check `sbom` fails on drift or on any OSV advisory. First run found 36 Pillow advisories, fixed by moving to Python 3.11 and Pillow 12.3 |
+| CS-9 | No credential, key or certificate shall be committed to the repository; the development configuration shall use clearly marked non-production material. | T | Implemented | Suite check `secrets`; the development CA, keys and tokens are generated into git-ignored `.run/pki/` with NOT FOR PRODUCTION in every subject, never committed |
 | CS-10 | An update concept shall be described for the cluster and monitor software. It shall cover package authenticity and the behaviour on a failed update, as UNECE R155 and R156 require for type approval. | I | Planned S4 | Section 6 outline |
-| CS-11 | Cybersecurity requirements shall be verified as part of the sprint regression suite, not as a separate end-of-project activity. | T | Partial | Suite exists (`scripts/regression.sh`) with range and secret checks for CS-5 and CS-9; CS-6 and CS-8 checks join in S2 |
+| CS-11 | Cybersecurity requirements shall be verified as part of the sprint regression suite, not as a separate end-of-project activity. | T | Implemented | 16-check suite in `scripts/regression.sh`, run before each demo and on every push by `.github/workflows/regression.yml`; each check names the requirements it evidences |
 
 # 8. Verification in the regression suite (CS-11)
 
@@ -137,4 +148,6 @@ From sprint 2 the regression suite runs before every demo. It carries these chec
 | Monitor isolation | The driver monitor writes no file and opens no socket except the broker | CS-6 |
 | Dependency scan | No component has a known vulnerability, checked against the SBOM | CS-8 |
 | Secret scan | No key or credential appears in any tracked file | CS-9 |
-| Plaintext refusal | The broker refuses an unencrypted client unless the development flag is set | CS-3, once it lands |
+| Plaintext refusal | The broker refuses an unencrypted or tokenless client; a consumer cannot publish; a provider cannot publish outside its own signals (`transport-security`) | CS-3, CS-4, IR-5 |
+| Toolchain pin | The Flutter SDK in use is the pinned one (`toolchain-pin`) | NFR-8 |
+| Live contract | Every catalogue path in appendix A delivers a correctly typed datapoint from the running broker (`live-contract`) | FR-11, FR-13, IR-2 |

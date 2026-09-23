@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "System Architecture Description"
 author: "Ahmed Abdelghany"
-date: "2026-09-08"
+date: "2026-09-23"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-08"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SAD-001 |
 | Title | System Architecture Description |
-| Version | 1.2 |
+| Version | 1.3 |
 | Status | Baseline for sprint 1 review |
-| Date | 2026-09-08 |
+| Date | 2026-09-23 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -27,6 +27,7 @@ date: "2026-09-08"
 | 1.0 | 2026-09-03 | A. Abdelghany | First baseline, written from the running system: context, components, interfaces, runtime, deployment, decisions and deviations, signal contract appendix |
 | 1.1 | 2026-09-03 | A. Abdelghany | Layering, worked signal path (new section 5.4), runtime loop, manoeuvre state machine and deployment diagrams added; architecture principle diagram moved to draw.io |
 | 1.2 | 2026-09-08 | A. Abdelghany | Section 5.4 worked example now traces one road speed from the bus to the dial with real signal names and values. DD-10 closed: the databroker image is pinned by tag and digest. Glossary pointer added |
+| 1.3 | 2026-09-23 | A. Abdelghany | Broker interface now TLS with token authorisation; DD-6 and DD-11 closed; DD-12 records token authentication in place of client certificates; broker access module and CAN feeder spike added to the component catalogue |
 
 # 1. Purpose and scope
 
@@ -80,6 +81,8 @@ Swapping the simulator for a real CAN bus changes one box on the left. No consum
 | Driver monitor | Face landmarks to fatigue, distraction and alert state; publishes derived state only | Python, MediaPipe FaceLandmarker (3.7 MB model, CPU), OpenCV | Authored (pipeline), upstream (model) | `emulator/dms.py`, `emulator/models/` |
 | Driver monitor viewer | Debug window: landmarks, metrics, thresholds; can stand in for the monitor | Python, OpenCV | Authored | `emulator/dms_viewer.py` |
 | Engine audio | RPM-driven engine sound, a third independent subscriber | Python | Authored | `emulator/engine_audio.py` |
+| Broker access | One module every Python client connects through: TLS, its role's token, or plaintext on request | Python | Authored | `emulator/broker.py` |
+| CAN feeder (spike) | KUKSA's CAN provider on a virtual bus with AGL's DBC; the sprint 3 path proven on the desk | Container, Python | Upstream (provider), authored (spike) | `scripts/can_spike.py`, `vss/dbc/` |
 | Flutter cluster | The HMI on Linux; two screens (PULSE racing, classic analogue) in a swipeable pager | Flutter, Dart, custom-painted canvas; gRPC stubs generated from the KUKSA protos | Authored (UI, service), generated (stubs), scaffold (runner, one deliberate edit) | `pulse-cluster/` |
 | Compose cluster | The same design on Android Automotive | Kotlin, Jetpack Compose, gRPC | Authored | `pulse-cluster-android/` |
 | AGL reference cluster | AGL's own Flutter cluster, used as a comparison point | Flutter | Upstream, cloned from AGL Gerrit, not part of this repository | `flutter-instrument-cluster/` |
@@ -110,8 +113,8 @@ Source: `docs/diagrams/layering.drawio`.
 | Protocol | gRPC over HTTP/2 |
 | API | `kuksa.val.v1` (Get, Set, Subscribe streaming) |
 | Address | `127.0.0.1:55555`, bound to loopback only |
-| Transport security | None in the development configuration (`--insecure`); see PULSE-SEC-001 |
-| Authorisation | None in the development configuration; see PULSE-SEC-001 CS-4 |
+| Transport security | TLS to a development certificate by default; plaintext only with `PULSE_INSECURE=1` and a warning (PULSE-SEC-001 CS-3) |
+| Authorisation | Signed token per client, scoped: consumers read, providers provide their own signals (PULSE-SEC-001 CS-4, DD-12) |
 | Validation | Broker rejects a value whose datatype, `allowed` list or `min`/`max` does not match the catalogue (IR-2, CS-5) |
 | Client stubs | Dart and Kotlin generated from the same `.proto` files; Python via kuksa-client |
 
@@ -224,12 +227,13 @@ Recorded here because PULSE-SAF-001 SR-10 requires every decision that could blo
 | DD-3 | Broker: Eclipse KUKSA databroker in a container | Reference implementation of the VSS broker; used by AGL | Container runtime is a desk convenience; target deployment runs it as a native service |
 | DD-4 | API version: `kuksa.val.v1` | Matches AGL and its overlay | Migration to v2 when AGL moves; stubs regenerate from the protos |
 | DD-5 | Signal catalogue pinned to VSS 6.0 | Constraint C-2 | Upgrades are reviewed changes; the AGL overlay must be re-validated per version |
-| DD-6 | Development transport: plaintext gRPC on loopback (`--insecure`) | Desk rig, one host | Removed by CS-3 in sprint 2; start-up warning until then |
+| DD-6 | Development transport: plaintext gRPC on loopback (`--insecure`) | Desk rig, one host | Closed in sprint 2: secure by default, plaintext only on request with a warning |
 | DD-7 | Window system on the desk rig: X11 with `xrandr` placement | Development host convenience | Target uses Wayland; the runner reads `CLUSTER_GEOM` so placement logic does not change |
 | DD-8 | Driver monitor runs on CPU, no accelerator | 6.5 ms per frame is already inside budget; avoids hardware dependence (A-2) | A production DMS would still need an infrared camera and a qualified evaluation set (backlog) |
 | DD-9 | Safety-loop actuation lives in the simulator | No vehicle exists; the manoeuvre must be demonstrable | On a real vehicle the actuation moves to a motion controller; the trigger signal contract stays |
 | DD-10 | Databroker image consumed at tag `latest` | Convenience at project start | Closed: pinned to the 0.7.0 tag and digest in `scripts/start-databroker.sh` |
-| DD-11 | Flutter SDK version not pinned | Convenience at project start | Violates NFR-8; pin via FVM or a recorded version in sprint 2 |
+| DD-11 | Flutter SDK version not pinned | Convenience at project start | Closed in sprint 2: 3.47.0 in `.fvmrc`, floor in `pubspec.yaml`, enforced by the `toolchain-pin` check |
+| DD-12 | Clients authenticate with a signed token over TLS, not a client certificate | KUKSA 0.7.0 cannot verify client certificates | Meets CS-3's goal by a different mechanism; the requirement text or the broker changes later. See PULSE-SEC-001 section 5 |
 
 # 9. Verification approach
 

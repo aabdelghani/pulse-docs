@@ -2,7 +2,7 @@
 title: "PULSE Instrument Cluster"
 subtitle: "Functional Safety Concept, preliminary (ISO 26262)"
 author: "Ahmed Abdelghany"
-date: "2026-09-08"
+date: "2026-09-23"
 ---
 
 # Document control
@@ -11,9 +11,9 @@ date: "2026-09-08"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SAF-001 |
 | Title | Functional Safety Concept, preliminary |
-| Version | 0.9.3 |
+| Version | 0.9.4 |
 | Status | Skeleton for sprint 1 review; not safety-reviewed |
-| Date | 2026-09-08 |
+| Date | 2026-09-23 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Safety manager, not yet assigned |
 | Review gate | Sprint 1 review for structure; sprint 2 review for content |
@@ -28,6 +28,7 @@ date: "2026-09-08"
 | 0.9.1 | 2026-09-03 | A. Abdelghany | Safety-mechanism placement and manoeuvre state-machine diagrams added |
 | 0.9.2 | 2026-09-03 | A. Abdelghany | SR-9 evidence updated for the regression suite |
 | 0.9.3 | 2026-09-08 | A. Abdelghany | Worked ASIL derivation added for H-7 so the S, E and C columns can be read without knowing the method. SM-2 and the item-definition context reworded. SR-1 evidence tightened. Glossary pointer added |
+| 0.9.4 | 2026-09-23 | A. Abdelghany | SM-1 implemented in both HMIs; SR-4, SR-5 and SR-9 to Implemented. Freshness judged by arrival time rather than broker timestamp, with the reason recorded in section 3 |
 
 # 1. Purpose and disclaimer
 
@@ -65,7 +66,7 @@ Signals whose corruption or loss could mislead the driver. Each carries a propos
 | Vehicle.Driver.Monitoring.InterventionState | Driver must know the vehicle is about to brake | 10 Hz | 500 ms | Banner "vehicle state unknown" |
 | Vehicle.Driver.Monitoring.InterventionCountdown | As above | 10 Hz | 500 ms | Countdown hidden, banner stays |
 
-Freshness is not yet enforced in either HMI (SR-4, SR-5 status below). The broker timestamps every datapoint, so the criterion can be evaluated client-side without a protocol change.
+Both HMIs enforce these criteria (SM-1). Freshness is judged by when a value last arrived, on the HMI's own monotonic clock, rather than by the broker's timestamp: that needs no clock agreement between hosts and catches a lost broker or link as well as a stalled provider. Providers therefore republish every signal in this table on every tick even when its value is unchanged.
 
 # 4. Preliminary hazard analysis and risk assessment (SR-2)
 
@@ -94,7 +95,7 @@ Source: `docs/diagrams/safety-mechanisms.drawio`.
 
 ## SM-1 Staleness detection and degraded display (SR-4, SR-5)
 
-Each HMI shall track the broker timestamp of every safety-relevant signal and compare it to the freshness criterion in section 3 on every frame. Loss of the broker connection shall be treated as all signals stale at once. The degraded presentation in section 3 shall replace the value. Current state: the Flutter service reconnects on broker loss but keeps displaying the last value. Planned sprint 2.
+Each HMI shall track the arrival time of every safety-relevant signal and compare it to the freshness criterion in section 3 at least every 100 ms. Loss of the broker connection shall be treated as all signals stale at once. The degraded presentation in section 3 shall replace the value. Implemented in sprint 2: the Flutter cluster degrades within one second of the broker stopping, verified on screen and by widget test; the Compose cluster carries the same model, verified by compilation and unit test, not yet on a device.
 
 ## SM-2 Fail visibly (SR-6)
 
@@ -154,12 +155,12 @@ Held in PULSE-SAD-001 section 8, decisions DD-1 to DD-11. The ones that would bl
 | SR-1 | An item definition shall be written for the cluster and driver-monitoring function, naming the system boundary, the assumed vehicle context, and the interfaces crossing that boundary (ISO 26262-3). | I | Partial | Section 2 of this document |
 | SR-2 | A preliminary hazard analysis and risk assessment (HARA) shall be recorded for the displayed functions, with severity, exposure and controllability rated per malfunction and a resulting ASIL proposal. | I | Partial | Section 4; eight hazards rated; review in S2 |
 | SR-3 | Signals whose corruption or loss could mislead the driver (road speed, gear, warning indicators, drowsiness alert) shall be identified as safety-relevant and listed explicitly. | I | Implemented | Section 3 |
-| SR-4 | The system shall detect loss of a safety-relevant signal, including broker disconnection and stale values, and shall indicate the degraded state rather than continuing to display the last known value. | T | Planned S2 | SM-1; Flutter service reconnects but shows last value today |
-| SR-5 | Every safety-relevant signal shall carry a freshness criterion; a value older than its criterion shall be treated as invalid. | T | Partial | Criteria proposed in section 3; enforcement with SM-1 in S2 |
+| SR-4 | The system shall detect loss of a safety-relevant signal, including broker disconnection and stale values, and shall indicate the degraded state rather than continuing to display the last known value. | T | Implemented | SM-1. Flutter: `pulse-cluster/test/cluster_smoke_test.dart` and a screen capture one second after the broker was stopped. Compose: `FreshnessTest.kt`, not yet run on a device |
+| SR-5 | Every safety-relevant signal shall carry a freshness criterion; a value older than its criterion shall be treated as invalid. | T | Implemented | Criteria in section 3 are the `kFreshness` table in `vehicle_state.dart` and `FRESHNESS_NS` in `VssClient.kt`; providers republish them every tick (`KEEPALIVE`) |
 | SR-6 | Safety-relevant display elements shall fail visibly. A rendering fault shall not present a plausible but wrong value. | T | Planned S3 | SM-2 |
 | SR-7 | The minimum-risk manoeuvre triggered by sustained driver drowsiness shall be specified as a safety mechanism: trigger condition, driver-recovery window, escalation, and abort condition. | D | Implemented | SM-3; implemented in `emulator/telemetry_sim.py` cruise mode; demonstrated live |
 | SR-8 | Freedom from interference shall be argued for the mixed-criticality cockpit: infotainment content shall not be able to degrade or obscure the safety-relevant cluster surface. | A | Planned S4 | Section 6 outline |
-| SR-9 | A safety-relevant requirement shall be traceable to the verification that demonstrates it, and each verification result shall be reproducible from the repository. | T | Partial | PULSE-RTM-001 generated from this table; regression suite runs before each demo and commits its report to `docs/evidence/`; safety-specific tests (SR-4 to SR-6) still to come in S2 and S3 |
+| SR-9 | A safety-relevant requirement shall be traceable to the verification that demonstrates it, and each verification result shall be reproducible from the repository. | T | Implemented | PULSE-RTM-001 generated from this table; 16-check suite runs before each demo and in CI, report committed to `docs/evidence/`; SR-4 and SR-5 have named tests |
 | SR-10 | Any decision that would block a later ASIL argument, such as the choice of graphics stack, operating system or toolkit, shall be recorded as a documented deviation with its rationale. | I | Implemented | PULSE-SAD-001 section 8, DD-1 to DD-11 |
 | SR-11 | A qualification gap list shall be maintained: for each component, what a production programme would still need (qualified toolchain, certified OS, evidence of a safety-qualified renderer). | I | Implemented | Section 8 |
 
