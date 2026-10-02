@@ -11,9 +11,9 @@ date: "2026-09-23"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SAD-001 |
 | Title | System Architecture Description |
-| Version | 1.3 |
+| Version | 1.4 |
 | Status | Baseline for sprint 1 review |
-| Date | 2026-09-23 |
+| Date | 2026-10-02 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -28,6 +28,7 @@ date: "2026-09-23"
 | 1.1 | 2026-09-03 | A. Abdelghany | Layering, worked signal path (new section 5.4), runtime loop, manoeuvre state machine and deployment diagrams added; architecture principle diagram moved to draw.io |
 | 1.2 | 2026-09-08 | A. Abdelghany | Section 5.4 worked example now traces one road speed from the bus to the dial with real signal names and values. DD-10 closed: the databroker image is pinned by tag and digest. Glossary pointer added |
 | 1.3 | 2026-09-23 | A. Abdelghany | Broker interface now TLS with token authorisation; DD-6 and DD-11 closed; DD-12 records token authentication in place of client certificates; broker access module and CAN feeder spike added to the component catalogue |
+| 1.4 | 2026-10-02 | A. Abdelghany | PULSE DBC and CAN overlay: every signal the cluster shows can now arrive over the bus (50 mapped signals in 14 frames). CAN feeder row and overlay table updated |
 
 # 1. Purpose and scope
 
@@ -82,7 +83,7 @@ Swapping the simulator for a real CAN bus changes one box on the left. No consum
 | Driver monitor viewer | Debug window: landmarks, metrics, thresholds; can stand in for the monitor | Python, OpenCV | Authored | `emulator/dms_viewer.py` |
 | Engine audio | RPM-driven engine sound, a third independent subscriber | Python | Authored | `emulator/engine_audio.py` |
 | Broker access | One module every Python client connects through: TLS, its role's token, or plaintext on request | Python | Authored | `emulator/broker.py` |
-| CAN feeder (spike) | KUKSA's CAN provider on a virtual bus with AGL's DBC; the sprint 3 path proven on the desk | Container, Python | Upstream (provider), authored (spike) | `scripts/can_spike.py`, `vss/dbc/` |
+| CAN feeder | KUKSA's CAN provider on a virtual bus with AGL's DBC plus the PULSE DBC; fed by the simulator's CAN mode or by hand from the Vehicle Control panel | Container, Python, Tk | Upstream (provider), authored (feeders, panel, PULSE DBC) | `emulator/can_bus.py`, `emulator/vehicle_control/`, `vss/dbc/` |
 | Flutter cluster | The HMI on Linux; two screens (PULSE racing, classic analogue) in a swipeable pager | Flutter, Dart, custom-painted canvas; gRPC stubs generated from the KUKSA protos | Authored (UI, service), generated (stubs), scaffold (runner, one deliberate edit) | `pulse-cluster/` |
 | Compose cluster | The same design on Android Automotive | Kotlin, Jetpack Compose, gRPC | Authored | `pulse-cluster-android/` |
 | AGL reference cluster | AGL's own Flutter cluster, used as a comparison point | Flutter | Upstream, cloned from AGL Gerrit, not part of this repository | `flutter-instrument-cluster/` |
@@ -289,6 +290,7 @@ Recorded here because PULSE-SAF-001 SR-10 requires every decision that could blo
 | `vss/agl_vss_overlay.vspec` | AGL's cockpit signals: steering-wheel switches, infotainment, navigation, acceleration, angular velocity | AGL meta-agl-demo, `vss-agl_6.0` |
 | `vss/pulse_vss_overlay.vspec` | `Vehicle.Motorsport` branch: lap number, lap times, DRS, ERS | PULSE |
 | `vss/dms_vss_overlay.vspec` | `Vehicle.Driver.Monitoring` branch: active, alert state, intervention state, countdown | PULSE |
+| `vss/pulse_can_overlay.vspec` | Bus mappings only, no new paths: fuel from AGL's `PT_FuelLevelPct`; ERS, DRS, tyre pressures and driver monitoring from `vss/dbc/pulse.dbc` (frames 0x210, 0x220, 0x300, 0x400, clear of every AGL ID) | PULSE |
 
 ## A.3 Regeneration
 
