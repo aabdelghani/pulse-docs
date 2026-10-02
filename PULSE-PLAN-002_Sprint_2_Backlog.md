@@ -216,7 +216,9 @@ display. A second host has all three. Checked against the repository on
 | 3 | UI smoke test per build | Partial | Implemented | Compose: `ClusterSmokeTest.kt` on the Android 16 car emulator renders an injected 87 km/h in gear 4, then the degraded form; suite check `compose-ui` |
 | 5 | Compose staleness display | Partial | Implemented | All eight criteria, as in Flutter; captures 1.4 s after the broker was stopped and after it returned (`docs/evidence/screens/`) |
 | 9 | Driver-monitor privacy test | Partial | Implemented | `dms-privacy` ran with the monitor executing for the first time. It failed, correctly, and the cause was fixed (finding 1) |
-| 15 | Virtual CAN feeder spike | Implemented | Implemented, extended | The simulator can act as the vehicle's ECUs on `vcan0` (`CAN=1 ./run.sh`); `can-decode` covers all 35 mapped signals in CI |
+| 15 | Virtual CAN feeder spike | Implemented | Implemented, extended | The simulator acts as the vehicle's ECUs on `vcan0` (`CAN=1 ./run.sh`, shown on the strip); `can-decode` covers all 35 mapped signals in CI; `can-path` passes live; a recorded lap replays from `emulator/can_logs/` |
+
+The full suite passed 19 of 19 on 2 October with every check executing, none skipped (report 2026-10-02 08:38).
 
 Definition of done for the week 6 gate (section 7), restated: 1 met, and CI
 now actually runs the suite (finding 3); 2 met on both HMIs; 3 met with the
@@ -264,6 +266,13 @@ Findings of the day:
    maps it with `on_change`, so in CAN mode an unchanged hazard would go
    stale after 2 s. The provider's own mapping copy forwards every safety
    signal at 100 ms; `can-path` asserts the hazard stays fresh.
+10. **The device check would have used any attached phone.** With a phone
+    plugged in for charging, `compose-ui` aimed Gradle at it; the install
+    was refused, no test ran, and the check still passed. It now uses only
+    an emulator unless a device is named, and zero tests is a failure.
+11. **`can-path` depended on earlier checks.** In cruise mode the simulator
+    reacts to a driver alert left in the broker by the monitor checks with
+    its emergency stop. The check now runs the simulator in lap mode.
 
 Week 7 checkpoint for sprint 3 (gate 16 October: CAN on target hardware):
 
@@ -271,7 +280,7 @@ Week 7 checkpoint for sprint 3 (gate 16 October: CAN on target hardware):
 |---------------------------------|------------------------------------------------------|
 | Compose staleness shown on a device | Done (rows 3 and 5 above) |
 | Safety and security review | Not held. Needs the two managers' calendars |
-| Physical CAN bus behind the same contract | Virtual path complete; CAN HAT not started. The provider, DBC and checks do not change for `can0` |
+| Physical CAN bus behind the same contract | Virtual path complete and verified live, with record and replay; CAN HAT not started. The provider, DBC and checks do not change for `can0` |
 | Raspberry Pi 5 baseline | Not started. No board recorded as ordered. It must expose the CPU features the driver monitor needs (finding of 23 September) |
 
 Decisions still open from the review: book the safety and security review;
