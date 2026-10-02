@@ -220,8 +220,10 @@ display. A second host has all three. Checked against the repository on
 
 Definition of done for the week 6 gate (section 7), restated: 1 met, and CI
 now actually runs the suite (finding 3); 2 met on both HMIs; 3 met with the
-CS-3 deviation; 4 met; 5 open until the rehearsal on the strip, which this
-host has.
+CS-3 deviation; 4 met; 5 met on the physical strip: `./run.sh` to the
+cluster on the strip in 4.1 to 5.1 s with the broker start included, and the
+broker-loss demo recorded as live, degraded and recovered
+(`docs/evidence/screens/20261002-flutter-strip-*`).
 
 FR-13 is Implemented: both clusters consume the same 28 signals. That
 answers decision 3 of section 8.3 by funding parity. The benchmark in the
@@ -246,6 +248,22 @@ Findings of the day:
    Apps run as user 10 there, and the credential script wrote to user 0.
    Fixed in `scripts/android-push-pki.sh`.
 5. **The simulator did not survive a broker restart.** It now reconnects.
+6. **The Flutter cluster did not recover from a broker restart.** It
+   degraded correctly, but the Dart gRPC stream stayed open after the
+   broker died and the client never resubscribed. Three seconds of silence
+   now ends the stream; recovery measured at 2.6 to 3.9 s. Found only on
+   the strip rehearsal, which is the argument for rehearsing on it.
+7. **An empty entry counted as an arrival.** A new subscription opens with
+   an empty entry for every path without a value; both clusters took it as
+   fresh, so an absent driver monitor raised no warning for one second
+   after reconnecting. Both now ignore empty entries; Flutter test added.
+8. **The suite left driver monitors running.** Ending `strace` in
+   `dms-privacy` did not end the traced monitor, and each orphan kept
+   publishing driver state. The suite now ends whole process groups.
+9. **The CAN provider forwarded the hazard only on change.** The catalogue
+   maps it with `on_change`, so in CAN mode an unchanged hazard would go
+   stale after 2 s. The provider's own mapping copy forwards every safety
+   signal at 100 ms; `can-path` asserts the hazard stays fresh.
 
 Week 7 checkpoint for sprint 3 (gate 16 October: CAN on target hardware):
 
