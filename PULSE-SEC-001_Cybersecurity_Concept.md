@@ -11,9 +11,9 @@ date: "2026-09-23"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SEC-001 |
 | Title | Cybersecurity Concept, preliminary |
-| Version | 0.9.4 |
+| Version | 0.9.5 |
 | Status | Skeleton for sprint 1 review; not security-reviewed |
-| Date | 2026-09-23 |
+| Date | 2026-10-02 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Security manager, not yet assigned |
 | Review gate | Sprint 1 review for structure; sprint 2 review for content |
@@ -29,6 +29,7 @@ date: "2026-09-23"
 | 0.9.2 | 2026-09-03 | A. Abdelghany | CS-9 and CS-11 status updated for the regression suite |
 | 0.9.3 | 2026-09-08 | A. Abdelghany | Section 8 check list turned into a table. CS-1 and CS-10 reworded. CS-8, the asset table and threat T-6 updated: the broker image is pinned, so only the SBOM gap remains. Glossary pointer added |
 | 0.9.4 | 2026-09-23 | A. Abdelghany | Sprint 2 controls landed: TLS and token authorisation (CS-3, CS-4), HMI-side range check (CS-5), SBOM with OSV scan (CS-8), privacy trace (CS-6), CI (CS-11). Deviation from mutual TLS recorded in section 5 |
+| 0.9.5 | 2026-10-02 | A. Abdelghany | CS-6 to Implemented after its first real run. Finding recorded in section 5: MediaPipe's built-in usage logger, held on the host. CS-8 extended to the full resolved Python set (`constraints.txt`) |
 
 # 1. Purpose and proportionality
 
@@ -92,11 +93,29 @@ Source: `docs/diagrams/tara-map.drawio`.
 | Transport encryption and client authentication | CS-3 | TLS to a development certificate; every client presents a signed token. Plaintext only on request, with a warning (DD-6 closed) | Sprint 2: enable TLS in the databroker with development certificates under `certs/dev/` marked non-production; start-up prints a red warning whenever `--insecure` is used |
 | Per-client write authorisation | CS-4 | Token scopes: consumers read only, providers limited to their own signals | Sprint 3: KUKSA JWT authorisation with one token per provider scoped to its signal set; consumers get read-only tokens |
 | Catalogue validation of incoming values | CS-5 | Broker rejects on set; both HMIs refuse out-of-restriction values as defence in depth | Sprint 2: HMI-side check as defence in depth; test that an out-of-range publish is refused |
-| Camera data stays local | CS-6 | Driver monitor never writes frames and publishes derived state only | Sprint 2: test asserting no file output and no socket other than the broker |
+| Camera data stays local | CS-6 | Driver monitor never writes frames and publishes derived state only; MediaPipe's usage logger is held on the host; `dms-privacy` proves both | Sprint 2: test asserting no file output and no socket other than the broker |
 | Security event logging | CS-7 | None | Sprint 3: broker and provider logs for authentication failure, refused write, client disconnect; timestamped; no personal data |
-| Dependency pinning and SBOM | CS-8 | Everything pinned; CycloneDX SBOM in `docs/sbom/`, scanned against OSV by the suite | Sprint 2: pin the image digest; generate a CycloneDX SBOM per component; run a vulnerability check in the regression suite |
+| Dependency pinning and SBOM | CS-8 | Everything pinned, the full Python set through `constraints.txt`; CycloneDX SBOM in `docs/sbom/`, scanned against OSV by the suite | Sprint 2: pin the image digest; generate a CycloneDX SBOM per component; run a vulnerability check in the regression suite |
 | No secrets in the repository | CS-9 | Development PKI generated into git-ignored `.run/pki/`; suite scans every tracked file | Sprint 2: secret scan in the regression suite; development certificates clearly named and gitignored where private |
 | Update concept | CS-10 | None | Sprint 4: section 6 completed |
+
+**Finding: usage telemetry inside a dependency (T-5, T-6).** The first run
+of `dms-privacy` with the driver monitor executing, on 2 October, found that
+the process resolved `play.googleapis.com` and opened HTTPS connections to
+it. The source is MediaPipe itself: in 0.10.35 and 1.0.1, the versions tested, every task runner
+starts a libcurl client that posts session statistics (task type, timings)
+to Google. No camera frame or derived driver state is in those reports, but
+CS-6 says no socket except the broker, and the library offers no switch to
+turn the logger off. The driver monitor therefore sets the proxy variables,
+which libcurl honours, to a closed local port before MediaPipe loads, and
+exempts the broker through `NO_PROXY`, which gRPC also honours. The trace
+shows the logger's attempts ending on the host and the broker connection
+unchanged. This is a workaround, not a configuration option: a MediaPipe
+upgrade must be re-checked by the suite, and a production target would
+enforce the same rule at the platform level (for example a per-service
+network policy that allows loopback only). The finding also shows why the
+check must run where the monitor runs: on the reference VM it had only ever
+skipped.
 
 **Deviation from CS-3 as written.** CS-3 names mutual TLS. KUKSA databroker
 0.7.0 can present a server certificate but cannot verify client certificates;
@@ -130,7 +149,7 @@ Source: `docs/diagrams/update-flow.drawio`.
 | CS-3 | Broker communication shall support authenticated, encrypted transport (mutual TLS). Running without it shall be a configuration reserved for local development and flagged at start-up. | T | Implemented | TLS with a development certificate and a signed token per client, secure by default in `scripts/start-databroker.sh`; plaintext only with `PULSE_INSECURE=1` and a boxed warning. Suite check `transport-security`. Deviation: token authentication rather than client certificates, section 5 |
 | CS-4 | Write access to the signal tree shall be authorised per client. A consumer shall not be able to publish, and no client shall write outside its declared signal set. | T | Implemented | Token scopes from `scripts/dev_pki.py`: consumers read only; each provider may provide only the signals its source declares. Suite check `transport-security` proves a consumer cannot publish and a provider is refused outside its set |
 | CS-5 | Signal values received from any provider shall be range- and type-validated against the catalogue before display, so a compromised provider cannot drive arbitrary content onto the cluster. | T | Implemented | Broker refuses out-of-catalogue values (suite check `range-refusal`); both HMIs read the catalogue restrictions from the broker at connect and refuse values outside them, tested in `range_check_test.dart` and `FreshnessTest.kt` |
-| CS-6 | Camera frames shall not leave the device and shall not be persisted. Only derived state, such as the drowsiness level, shall be published. | I | Partial | `emulator/dms.py` publishes six derived signals. Suite check `dms-privacy` traces every file and socket call for 12 s; it needs a CPU with AVX to run the monitor, so it skips on the reference VM and runs in CI |
+| CS-6 | Camera frames shall not leave the device and shall not be persisted. Only derived state, such as the drowsiness level, shall be published. | I | Implemented | `emulator/dms.py` publishes six derived signals. Suite check `dms-privacy` traces every file and socket call for 12 s. Its first run with the monitor actually executing (2 October, a host with AVX) found the MediaPipe usage logger described in section 5; with that held on the host the check passes: no file left behind, no socket except the broker |
 | CS-7 | Security-relevant events, including authentication failure, unauthorised write attempt and client disconnection, shall be logged with a timestamp and without personal data. | T | Planned S3 | Section 5 |
 | CS-8 | All third-party dependencies shall be pinned and inventoried as a software bill of materials, and the inventory shall be checkable against published vulnerabilities. | T | Implemented | `scripts/sbom.py` writes a CycloneDX inventory of 85 components across Python, Dart, Android and the broker image; suite check `sbom` fails on drift or on any OSV advisory. First run found 36 Pillow advisories, fixed by moving to Python 3.11 and Pillow 12.3 |
 | CS-9 | No credential, key or certificate shall be committed to the repository; the development configuration shall use clearly marked non-production material. | T | Implemented | Suite check `secrets`; the development CA, keys and tokens are generated into git-ignored `.run/pki/` with NOT FOR PRODUCTION in every subject, never committed |

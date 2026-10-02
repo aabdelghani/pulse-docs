@@ -11,9 +11,9 @@ date: "2026-09-23"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SyRS-001 |
 | Title | System Requirements Specification |
-| Version | 1.4 |
+| Version | 1.5 |
 | Status | Draft frozen for review |
-| Date | 2026-09-23 |
+| Date | 2026-10-02 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Review gate | Sprint 1 review, week 3, 4 September 2026 |
@@ -30,6 +30,7 @@ date: "2026-09-23"
 | 1.2 | 2026-09-03 | A. Abdelghany | Evidence for FR-3, FR-4, FR-6 and FR-11 now points at the regression suite (`scripts/regression.sh`) and its committed reports |
 | 1.3 | 2026-09-08 | A. Abdelghany | FR-13 corrected to Partial: the two HMIs have diverged to 28 and 17 subscribed signals. NFR-8 and IR-2 evidence updated for the pinned broker image and the new unit-sanity check. FR-19 and FR-20 reworded, FR-20 now citing PULSE-SAF-001 SM-3 instead of restating it. Section 6 count table replaced by a pointer to the generated matrix. Worked requirement row added to section 1.2 |
 | 1.4 | 2026-09-23 | A. Abdelghany | Sprint 2 status: IR-5 and NFR-8 Implemented (secure-by-default broker, Flutter SDK pinned), FR-3 regeneration check now executes, FR-8 proven on a virtual bus, FR-13 wording updated, NFR-5 reduced to Partial pending a host with AVX |
+| 1.5 | 2026-10-02 | A. Abdelghany | FR-13 to Implemented: the Compose cluster now consumes the same 28 signals. FR-8 evidence extended to the simulator's CAN mode and the `can-decode` and `can-path` checks. FR-12 and NFR-5 evidence updated from a second host |
 
 # 1. Introduction
 
@@ -86,7 +87,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 |-------|-----------------------------------|----------|--------------|----------------------------------|
 | FR-6 | The system shall provide a telemetry source that generates physically plausible, correlated vehicle behaviour (speed, engine speed, gear, temperature, fuel, odometer) without any vehicle hardware. | D | Implemented | `emulator/telemetry_sim.py`: lap and cruise cycles with correlated RPM, fuel and odometer. Suite check `live-telemetry` passes |
 | FR-7 | The telemetry source shall run a repeatable cycle so that UI behaviour can be compared across runs and across implementations. | T | Partial | Phase table is fixed with no randomness, but sampling is wall-clock driven, so runs differ in timing. Fixed-step replay in S4 |
-| FR-8 | The telemetry source shall be replaceable by a real vehicle-bus provider without modification to any HMI code. | T | Partial | Proven on a virtual bus: `scripts/can_spike.py` feeds three frames on `vcan0` through KUKSA's CAN provider and AGL's DBC and they arrive as catalogue signals with no HMI change. Physical bus in S3 |
+| FR-8 | The telemetry source shall be replaceable by a real vehicle-bus provider without modification to any HMI code. | T | Partial | Proven on a virtual bus on 23 September (`scripts/can_spike.py`). Since 2 October the simulator can act as the vehicle's ECUs (`SIM_CAN=vcan0`, `CAN=1 ./run.sh`): the 35 signals the catalogue maps from AGL's DBC leave it only as frames and reach the broker through KUKSA's CAN provider (`emulator/can_bus.py`). Suite check `can-decode` verifies all 35 at minimum, midpoint and maximum and runs in CI; `can-path` runs the live path wherever `vcan0` is up. Physical bus in S3 |
 
 ## 2.3 Human-machine interface
 
@@ -95,8 +96,8 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | FR-9 | The HMI shall display, updating live: road speed, engine speed with warning and redline indication, selected gear, fuel level and range, per-corner tyre pressures, and driver-relevant status indicators. | D | Implemented | `pulse-cluster/lib/screen/pulse_screen.dart`; subscribed paths listed in PULSE-SAD-001 appendix A |
 | FR-10 | The HMI shall display motorsport telemetry: current lap number, current and best lap time, aerodynamic (DRS) state, and energy-recovery (ERS) level and state. | D | Implemented | `Vehicle.Motorsport.*` overlay signals rendered by both HMIs |
 | FR-11 | The HMI shall subscribe to abstract signals only. It shall not contain CAN frame parsing, DBC knowledge, or hardware-specific decoding. | T | Implemented | Regression suite check `hmi-purity` scans both HMI sources for CAN, DBC and SocketCAN tokens; passing, report in `docs/evidence/` |
-| FR-12 | The HMI shall be implemented twice, once in Flutter for Linux and once in Compose for Android Automotive, from a single shared visual design. | I | Implemented | `pulse-cluster/` (Flutter) and `pulse-cluster-android/` (Compose); design source in `design/` |
-| FR-13 | Both implementations shall consume the identical signal source, so any observed difference is attributable to the platform, not the data. | D | Partial | Same broker, protocol, catalogue limits and freshness rules for both. Signal sets still differ: Flutter 28 paths, Compose 17; the eleven extra are driver monitoring, hazard and intervention. Decision requested in PULSE-PLAN-002 section 8.3 |
+| FR-12 | The HMI shall be implemented twice, once in Flutter for Linux and once in Compose for Android Automotive, from a single shared visual design. | I | Implemented | `pulse-cluster/` (Flutter) and `pulse-cluster-android/` (Compose); design source in `design/`. Both seen running on 2 October, Compose on the Android 16 car emulator (suite check `compose-ui`, screens under `docs/evidence/screens/`) |
+| FR-13 | Both implementations shall consume the identical signal source, so any observed difference is attributable to the platform, not the data. | D | Implemented | Since 2 October both clusters subscribe to the same 28 paths through the same broker, protocol, catalogue limits and freshness rules. The benchmark figures in `BRIEF.md` were measured before parity and are re-measured in S4 (FR-15) |
 | FR-14 | The HMI shall render full-screen on the target strip display, and shall degrade gracefully to a normal window when that display is absent. | D | Implemented | `run.sh` locates a 2560 x 720 output at runtime and passes `CLUSTER_GEOM`; unset means a normal window |
 
 ## 2.4 Comparison and evidence
@@ -140,7 +141,7 @@ Source: `docs/diagrams/requirements-map.drawio`.
 | NFR-2 | Legibility: primary values (speed, gear, engine speed) shall be readable in a sub-second glance, consistent with driver-distraction practice. | D | Implemented | Design reviewed on the strip; numerals sized for the 720 px height |
 | NFR-3 | Footprint: the Linux implementation shall be deployable on constrained embedded hardware; total platform footprint is a first-class evaluation criterion. | T | Planned S3 | Raspberry Pi 5 baseline, work package 03, week 9 |
 | NFR-4 | Portability: migration to a different SoC or to a Yocto/AGL image shall not require HMI rework. | A | Planned S3 | Argument to be recorded with the Pi 5 baseline; Flutter embedder is the only platform-specific layer |
-| NFR-5 | Reproducibility: a new engineer shall be able to bring up the full stack on a clean machine from documentation alone. | T | Partial | Bring-up of 2026-08-18 in ONBOARDING.md. On 2026-09-23 a fresh environment from `requirements.txt` ran every provider; the driver monitor additionally needs a CPU with AVX, which this VM lacks. Re-run on the Pi 5 in S3 |
+| NFR-5 | Reproducibility: a new engineer shall be able to bring up the full stack on a clean machine from documentation alone. | T | Partial | Bring-up of 2026-08-18 in ONBOARDING.md. On 2026-10-02 a second host rebuilt both environments from `requirements.txt` with `constraints.txt` and ran every provider, the driver monitor included; a fresh install matches the SBOM exactly. Re-run on the Pi 5 in S3 |
 | NFR-6 | Openness: the stack shall be built from open-source components, with no proprietary runtime licence required for evaluation. | I | Implemented | KUKSA (Apache-2.0), VSS (MPL-2.0), Flutter (BSD), MediaPipe (Apache-2.0), AOSP; NOTICE file for the face model |
 | NFR-7 | Determinism: repeated runs of the same cycle shall produce the same signal sequence, so comparisons are valid. | T | Partial | Same as FR-7: value sequence is deterministic in shape, sample timing is not. Fixed-step replay planned S4 |
 | NFR-8 | Maintainability: upstream components shall be consumed at pinned versions, not floating heads. | I | Implemented | Broker by tag and digest; Python by `requirements.txt` on Python 3.11; VSS 6.0 and vss-tools 6.0; Dart by `pubspec.lock`; Flutter 3.47.0 in `.fvmrc`, enforced by suite check `toolchain-pin` |

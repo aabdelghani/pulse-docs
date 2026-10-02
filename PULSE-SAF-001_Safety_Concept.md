@@ -11,9 +11,9 @@ date: "2026-09-23"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-SAF-001 |
 | Title | Functional Safety Concept, preliminary |
-| Version | 0.9.4 |
+| Version | 0.9.5 |
 | Status | Skeleton for sprint 1 review; not safety-reviewed |
-| Date | 2026-09-23 |
+| Date | 2026-10-02 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Safety manager, not yet assigned |
 | Review gate | Sprint 1 review for structure; sprint 2 review for content |
@@ -29,6 +29,7 @@ date: "2026-09-23"
 | 0.9.2 | 2026-09-03 | A. Abdelghany | SR-9 evidence updated for the regression suite |
 | 0.9.3 | 2026-09-08 | A. Abdelghany | Worked ASIL derivation added for H-7 so the S, E and C columns can be read without knowing the method. SM-2 and the item-definition context reworded. SR-1 evidence tightened. Glossary pointer added |
 | 0.9.4 | 2026-09-23 | A. Abdelghany | SM-1 implemented in both HMIs; SR-4, SR-5 and SR-9 to Implemented. Freshness judged by arrival time rather than broker timestamp, with the reason recorded in section 3 |
+| 0.9.5 | 2026-10-02 | A. Abdelghany | SR-4 and SR-5 verified on the Compose cluster on a device: all eight freshness criteria, instrumented smoke test, captures of the degraded and recovered display |
 
 # 1. Purpose and disclaimer
 
@@ -155,8 +156,8 @@ Held in PULSE-SAD-001 section 8, decisions DD-1 to DD-11. The ones that would bl
 | SR-1 | An item definition shall be written for the cluster and driver-monitoring function, naming the system boundary, the assumed vehicle context, and the interfaces crossing that boundary (ISO 26262-3). | I | Partial | Section 2 of this document |
 | SR-2 | A preliminary hazard analysis and risk assessment (HARA) shall be recorded for the displayed functions, with severity, exposure and controllability rated per malfunction and a resulting ASIL proposal. | I | Partial | Section 4; eight hazards rated; review in S2 |
 | SR-3 | Signals whose corruption or loss could mislead the driver (road speed, gear, warning indicators, drowsiness alert) shall be identified as safety-relevant and listed explicitly. | I | Implemented | Section 3 |
-| SR-4 | The system shall detect loss of a safety-relevant signal, including broker disconnection and stale values, and shall indicate the degraded state rather than continuing to display the last known value. | T | Implemented | SM-1. Flutter: `pulse-cluster/test/cluster_smoke_test.dart` and a screen capture one second after the broker was stopped. Compose: `FreshnessTest.kt`, not yet run on a device |
-| SR-5 | Every safety-relevant signal shall carry a freshness criterion; a value older than its criterion shall be treated as invalid. | T | Implemented | Criteria in section 3 are the `kFreshness` table in `vehicle_state.dart` and `FRESHNESS_NS` in `VssClient.kt`; providers republish them every tick (`KEEPALIVE`) |
+| SR-4 | The system shall detect loss of a safety-relevant signal, including broker disconnection and stale values, and shall indicate the degraded state rather than continuing to display the last known value. | T | Implemented | SM-1. Flutter: `pulse-cluster/test/cluster_smoke_test.dart` and a screen capture one second after the broker was stopped. Compose: `FreshnessTest.kt`, the instrumented `ClusterSmokeTest.kt` on the Android 16 car emulator (suite check `compose-ui`), and captures 1.4 s after the broker was stopped and after it returned, with no action on the app (`docs/evidence/screens/20261002-compose-*`) |
+| SR-5 | Every safety-relevant signal shall carry a freshness criterion; a value older than its criterion shall be treated as invalid. | T | Implemented | Criteria in section 3 are the `kFreshness` table in `vehicle_state.dart` and `FRESHNESS_NS` in `VssClient.kt`, all eight in both since 2 October; providers republish them every tick (`KEEPALIVE`) |
 | SR-6 | Safety-relevant display elements shall fail visibly. A rendering fault shall not present a plausible but wrong value. | T | Planned S3 | SM-2 |
 | SR-7 | The minimum-risk manoeuvre triggered by sustained driver drowsiness shall be specified as a safety mechanism: trigger condition, driver-recovery window, escalation, and abort condition. | D | Implemented | SM-3; implemented in `emulator/telemetry_sim.py` cruise mode; demonstrated live |
 | SR-8 | Freedom from interference shall be argued for the mixed-criticality cockpit: infotainment content shall not be able to degrade or obscure the safety-relevant cluster surface. | A | Planned S4 | Section 6 outline |

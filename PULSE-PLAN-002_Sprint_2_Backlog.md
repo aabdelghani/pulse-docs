@@ -11,9 +11,9 @@ date: "2026-09-23"
 |-------------------------|---------------------------------------------------------------------------|
 | Document ID | PULSE-PLAN-002 |
 | Title | Sprint 2 Backlog |
-| Version | 0.4 |
+| Version | 0.5 |
 | Status | Draft for the sprint 1 review; frozen after review feedback is merged |
-| Date | 2026-09-23 |
+| Date | 2026-10-02 |
 | Author | Ahmed Abdelghany |
 | Reviewer | Cockpit Electronics / HMI Platform Group (sponsor) |
 | Sprint window | Week 4 to week 6, 7 September to 25 September 2026 |
@@ -28,6 +28,7 @@ date: "2026-09-23"
 | 0.2 | 2026-09-08 | A. Abdelghany | Document-control fields corrected so the review gate and related documents resolve. Item 7 reduced to Partial: the databroker digest is pinned, the Flutter SDK version is not. Sprint goal and out-of-scope wording clarified |
 | 0.3 | 2026-09-11 | A. Abdelghany | Week 4 checkpoint added as section 8: per-item state verified against the repository, hours position, decisions requested. Sprint 1 review recorded as held with no comments |
 | 0.4 | 2026-09-23 | A. Abdelghany | Week 6 checkpoint added as section 8.5: state per item on 23 September, definition of done against the gate, decisions taken while implementing |
+| 0.5 | 2026-10-02 | A. Abdelghany | Section 8.6: the three partial items closed on a second host, findings, and the week 7 checkpoint of sprint 3 |
 
 # 1. Sprint goal
 
@@ -202,3 +203,60 @@ Flutter stays at 3.47.0; freshness is judged by arrival time rather than the
 broker's timestamp (SAF section 3); token authentication stands in for mutual
 TLS (SEC section 5). One finding: the driver monitor cannot run on this VM
 because it exposes no AVX, so the sprint 3 target and the demo host must.
+
+## 8.6 State on 2 October, and the week 7 checkpoint
+
+The three items left partial at the gate needed hardware the reference VM
+does not have: a CPU with AVX, KVM for an Android emulator, and the strip
+display. A second host has all three. Checked against the repository on
+2 October; every row below is in a commit of that day.
+
+| # | Item | State on 23 September | State on 2 October | Checked by |
+|----|--------------------------|----------------------|--------------------|--------------------------------------|
+| 3 | UI smoke test per build | Partial | Implemented | Compose: `ClusterSmokeTest.kt` on the Android 16 car emulator renders an injected 87 km/h in gear 4, then the degraded form; suite check `compose-ui` |
+| 5 | Compose staleness display | Partial | Implemented | All eight criteria, as in Flutter; captures 1.4 s after the broker was stopped and after it returned (`docs/evidence/screens/`) |
+| 9 | Driver-monitor privacy test | Partial | Implemented | `dms-privacy` ran with the monitor executing for the first time. It failed, correctly, and the cause was fixed (finding 1) |
+| 15 | Virtual CAN feeder spike | Implemented | Implemented, extended | The simulator can act as the vehicle's ECUs on `vcan0` (`CAN=1 ./run.sh`); `can-decode` covers all 35 mapped signals in CI |
+
+Definition of done for the week 6 gate (section 7), restated: 1 met, and CI
+now actually runs the suite (finding 3); 2 met on both HMIs; 3 met with the
+CS-3 deviation; 4 met; 5 open until the rehearsal on the strip, which this
+host has.
+
+FR-13 is Implemented: both clusters consume the same 28 signals. That
+answers decision 3 of section 8.3 by funding parity. The benchmark in the
+deck predates it and is re-measured in sprint 4.
+
+Findings of the day:
+
+1. **MediaPipe sends usage statistics to Google.** The driver monitor
+   resolved `play.googleapis.com` and opened HTTPS connections to it. The
+   library's own logger, present in 0.10.35 and 1.0.1 (the versions tested), has
+   no off switch. No camera
+   data is in those reports, but CS-6 allows no socket except the broker.
+   The logger is now held on the host; PULSE-SEC-001 section 5 records the
+   finding and why the fix is a workaround.
+2. **Installs drifted.** Two transitive packages had moved since the SBOM
+   was reviewed, so the `sbom` check failed. `constraints.txt` now pins the
+   whole resolved set; a fresh install matches the SBOM exactly.
+3. **CI had never run the suite.** Every run since 23 September stopped at
+   a missing `apt-get update`. Fixed; CI also fetches VSS v6.0 so the
+   regeneration check runs there.
+4. **The Compose cluster could not authenticate on Android Automotive.**
+   Apps run as user 10 there, and the credential script wrote to user 0.
+   Fixed in `scripts/android-push-pki.sh`.
+5. **The simulator did not survive a broker restart.** It now reconnects.
+
+Week 7 checkpoint for sprint 3 (gate 16 October: CAN on target hardware):
+
+| Sprint 3 item | State on 2 October |
+|---------------------------------|------------------------------------------------------|
+| Compose staleness shown on a device | Done (rows 3 and 5 above) |
+| Safety and security review | Not held. Needs the two managers' calendars |
+| Physical CAN bus behind the same contract | Virtual path complete; CAN HAT not started. The provider, DBC and checks do not change for `can0` |
+| Raspberry Pi 5 baseline | Not started. No board recorded as ordered. It must expose the CPU features the driver monitor needs (finding of 23 September) |
+
+Decisions still open from the review: book the safety and security review;
+order the Pi 5 (8 GB as PULSE-SAD-001 section 7.2 specifies, or 16 GB with
+that line changed); change the wording of CS-3 or plan a broker with
+client-certificate support.
